@@ -14,6 +14,7 @@ SOURCEPATH      ..
 SOURCE          tts_proto_fep.cpp
 SOURCE          logging_window_gc.cpp
 SOURCE          control_walker.cpp
+SOURCE          fep_proxy.cpp
 
 SOURCEPATH      .
 START RESOURCE  tts_proto_fep.rss

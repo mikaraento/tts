@@ -2,7 +2,10 @@
 #define MYFEPPLUGIN_H_
 
 #include <fepplugin.h> // CCoeFepPlugIn
+
+class ControlWalker;
 class CWindowGc;
+class FepProxy;
 
 // TtsProtoFepPlugin is the bootstrap class for the TTS FEP: it gets loaded
 // by CCoeEnv::InstallFepL(), it instantiates an AKNFEP CCoeFep and starts
@@ -20,9 +23,11 @@ class TtsProtoFepPlugin: public CCoeFepPlugIn {
   virtual void SynchronouslyExecuteSettingsDialogL(CCoeEnv& aCoeEnv);
 
   CCoeFepPlugIn* akn_plugin_;
+  FepProxy* fep_proxy_;
   TUid akn_ecom_dtor_uid_;
   CWindowGc* original_gc_;
   char original_gc_vtbl_[4];
+  ControlWalker* walker_;
 };
 
 #endif  // MYFEPPLUGIN_H_

@@ -15,11 +15,23 @@ LoggingState::LoggingState() {
 LoggingState::~LoggingState() {
   logger_.Close();
 }
+
+void LoggingState::IncreaseIndent() {
+  if (indent_.Length() == indent_.MaxLength()) return;
+  indent_.Append(' ');
+}
+
+void LoggingState::DecreaseIndent() {
+  if (indent_.Length() == 0) return;
+  indent_.SetLength(indent_.Length() - 1);
+}
+
 void LoggingState::Log(const TDesC& message) {
   // We truncate the text since at least RDebug barfs on longer strings.
   buffer_ = process_name_;
   buffer_.Append(_L(": "));
-  buffer_.Append(message.Left(70));
+  buffer_.Append(indent_);
+  buffer_.Append(message.Left(70 - indent_.Length()));
   logger_.Write(buffer_);
   buffer_.Append(_L("\n"));
   RDebug::RawPrint(buffer_);

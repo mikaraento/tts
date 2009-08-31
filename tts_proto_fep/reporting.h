@@ -14,8 +14,11 @@ class LoggingState {
   static void TeardownTls();
   LoggingState();
   ~LoggingState();
+  void IncreaseIndent();
+  void DecreaseIndent();
   void Log(const TDesC& message);
  private:
+  TBuf<20> indent_;
   TBuf<50> process_name_;
   TBuf<128> buffer_;
   RFileLogger logger_;

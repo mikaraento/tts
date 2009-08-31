@@ -6,6 +6,7 @@
 #include <fepbase.h>
 
 #include "control_walker.h"
+#include "fep_proxy.h"
 #include "logging_window_gc.h"
 #include "reporting.h"
 
@@ -44,21 +45,32 @@ TtsProtoFepPlugin::~TtsProtoFepPlugin() {
   if (original_gc_) {
     Mem::Copy(original_gc_, original_gc_vtbl_, 4);
   }
+  delete walker_;
 }
 
 CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
                                     const CCoeFepParameters& aFepParameters) {
-  ControlWalker walker;
-  walker.Walk(LoggingState::Get());
+  walker_ = new (ELeave) ControlWalker;
+  walker_->TriggerWalk(LoggingState::Get());
+#if 0
   const TUid aknfepuid = { 0x101fd65a };
   akn_plugin_ = CCoeFepPlugIn::NewL(aknfepuid);
   return akn_plugin_->NewFepL(aCoeEnv, aFepParameters);
+#else
+  fep_proxy_ = new (ELeave) FepProxy(aCoeEnv);
+  fep_proxy_->ConstructL(aFepParameters);
+  return fep_proxy_;
+#endif
 }
 
 
 void TtsProtoFepPlugin::SynchronouslyExecuteSettingsDialogL(
     CCoeEnv& aConeEnvironment) {
-  akn_plugin_->SynchronouslyExecuteSettingsDialogL(aConeEnvironment);
+  if (fep_proxy_) {
+    fep_proxy_->SynchronouslyExecuteSettingsDialogL(aConeEnvironment);    
+  } else if (akn_plugin_) {
+    akn_plugin_->SynchronouslyExecuteSettingsDialogL(aConeEnvironment);
+  }
 }
 
 TtsProtoFepPlugin::TtsProtoFepPlugin() {
