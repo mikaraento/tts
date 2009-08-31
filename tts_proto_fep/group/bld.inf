@@ -1,0 +1,7 @@
+// bld.inf
+
+PRJ_PLATFORMS
+WINSCW GCCE
+
+PRJ_MMPFILES
+tts_proto_fep.mmp

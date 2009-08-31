@@ -1,0 +1,33 @@
+// tts_proto_fep_20006e90.mmp
+
+TARGET          tts_proto_fep_20006e90.dll
+TARGETTYPE      PLUGIN
+TARGETPATH      \sys\bin
+UID             0x10009D8D 0x20006E90
+VENDORID        0
+
+CAPABILITY      All -TCB
+
+EPOCSTACKSIZE   0x5000
+
+SOURCEPATH      ..
+SOURCE          tts_proto_fep.cpp
+SOURCE          logging_window_gc.cpp
+SOURCE          control_walker.cpp
+
+SOURCEPATH      .
+START RESOURCE  tts_proto_fep.rss
+TARGET          tts_proto_fep_20006e90.rsc // must be the same with dll's name
+END
+
+USERINCLUDE     ..
+SYSTEMINCLUDE   \epoc32\include
+SYSTEMINCLUDE   \epoc32\include\ecom
+
+LIBRARY         euser.lib
+LIBRARY         cone.lib
+LIBRARY         eikcore.lib
+LIBRARY         ecom.lib
+LIBRARY         fepbase.lib // for CCoeFepPlugin
+LIBRARY         ws32.lib // CWindowGc
+LIBRARY         gdi.lib flogger.lib avkon.lib eikcdlg.lib eikcoctl.lib eikctl.lib pbkview.lib aknnotify.lib aknskins.lib apparc.lib commondialogs.lib commonui.lib downloadmgruilib.lib etext.lib form.lib mgfetch.lib msgeditorutils.lib pbkeng.lib richbio.lib sendas2.lib sendui.lib spdctrl.lib uiklaf.lib viewcli.lib // CGraphicsContext

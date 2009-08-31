@@ -1,0 +1,27 @@
+// MyFepPlugin.rss
+
+#include <RegistryInfo.rh>
+//#include <fepplugin.h> // for KUidFepPluginInterface
+
+RESOURCE REGISTRY_INFO r_myfepplugin_registry
+	{
+	dll_uid = 0x20006E90;
+	interfaces = 
+		{
+		INTERFACE_INFO
+			{
+			interface_uid = 0x1020233F; // KUidFepPluginInterface
+			implementations = 
+				{
+				IMPLEMENTATION_INFO
+					{
+					implementation_uid = 0x20006E90;
+					version_no = 1;
+					display_name = "MyFepPlugin";
+					default_data = "";
+					opaque_data = "";
+					}
+				};
+			}
+		};
+	}
