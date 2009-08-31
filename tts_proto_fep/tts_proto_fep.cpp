@@ -5,6 +5,7 @@
 #include <ecom/ecom.h>
 #include <fepbase.h>
 
+#include "control_walker.h"
 #include "logging_window_gc.h"
 #include "reporting.h"
 
@@ -47,6 +48,8 @@ TtsProtoFepPlugin::~TtsProtoFepPlugin() {
 
 CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
                                     const CCoeFepParameters& aFepParameters) {
+  ControlWalker walker;
+  walker.Walk(LoggingState::Get());
   const TUid aknfepuid = { 0x101fd65a };
   akn_plugin_ = CCoeFepPlugIn::NewL(aknfepuid);
   return akn_plugin_->NewFepL(aCoeEnv, aFepParameters);
