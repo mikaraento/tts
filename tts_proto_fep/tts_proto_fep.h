@@ -1,29 +1,28 @@
-// MyFepPlugin.h
-
-#ifndef __MYFEPPLUGIN_H__
-#define __MYFEPPLUGIN_H__
+#ifndef MYFEPPLUGIN_H_
+#define MYFEPPLUGIN_H_
 
 #include <fepplugin.h> // CCoeFepPlugIn
 class CWindowGc;
 
+// TtsProtoFepPlugin is the bootstrap class for the TTS FEP: it gets loaded
+// by CCoeEnv::InstallFepL(), it instantiates an AKNFEP CCoeFep and starts
+// all the text introspection code.
 class TtsProtoFepPlugin: public CCoeFepPlugIn {
  public:
   static CCoeFepPlugIn* NewL();
-  ~TtsProtoFepPlugin();
-
-  // CCoeFepPlugin
-  CCoeFep* NewFepL(CCoeEnv& aCoeEnv, const CCoeFepParameters& aFepParameters);
-  void SynchronouslyExecuteSettingsDialogL(CCoeEnv& aCoeEnv);
 
  private:
   TtsProtoFepPlugin();
   void ConstructL();
+  virtual ~TtsProtoFepPlugin();
+  virtual CCoeFep* NewFepL(CCoeEnv& aCoeEnv,
+                           const CCoeFepParameters& aFepParameters);
+  virtual void SynchronouslyExecuteSettingsDialogL(CCoeEnv& aCoeEnv);
 
-  CCoeEnv* iCoeEnv;
   CCoeFepPlugIn* akn_plugin_;
   TUid akn_ecom_dtor_uid_;
   CWindowGc* original_gc_;
   char original_gc_vtbl_[4];
 };
 
-#endif // __MYFEPPLUGIN_H__
+#endif  // MYFEPPLUGIN_H_

@@ -6,6 +6,7 @@
 #include <fepbase.h>
 
 #include "logging_window_gc.h"
+#include "reporting.h"
 
 CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
   // The Phone application doesn't like the indirectly created AKNFEP. The
@@ -21,7 +22,7 @@ CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
   //    lingering state.
   RProcess me;
   me.Open(me.Id());
-  if (me.FileName().CompareF(_L("z:\\sys\\bin\\phone.exe")) == 0 ) {
+  if (me.FileName().CompareF(_L("z:\\sys\\bin\\phone.exe")) == 0) {
     me.Close();
     User::Leave(KErrAlreadyExists);
   }
@@ -35,11 +36,10 @@ CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
 }
 
 TtsProtoFepPlugin::~TtsProtoFepPlugin() {
-#ifdef __WINS__
-  // Deleting the AKNFEP plugin here makes the phone unhappy. Leak it instead.
+  // TODO(mikie): installing another FEP hangs the phone - see if that can
+  // be helped.
   delete akn_plugin_;
-#endif
-  CMyWindowGc::TeardownTls();
+  LoggingState::TeardownTls();
   if (original_gc_) {
     Mem::Copy(original_gc_, original_gc_vtbl_, 4);
   }
@@ -62,22 +62,22 @@ TtsProtoFepPlugin::TtsProtoFepPlugin() {
 }
 
 void TtsProtoFepPlugin::ConstructL() {
-  return;
-  CMyWindowGc::SetupTls();
+  LoggingState::SetupTls();
   CCoeEnv* env = CCoeEnv::Static();
-  CMyWindowGc* myGc = new (ELeave) CMyWindowGc(env->ScreenDevice());
-  original_gc_ = env->SwapSystemGc(myGc);
+  LoggingWindowGc* temp_logging_gc = new (ELeave) LoggingWindowGc(env->ScreenDevice());
+  original_gc_ = env->SwapSystemGc(temp_logging_gc);
   Mem::Copy(original_gc_vtbl_, original_gc_, 4);
-  Mem::Copy(original_gc_, myGc, 4); // replace the vtable
+  Mem::Copy(original_gc_, temp_logging_gc, 4); // replace the vtable
   env->SwapSystemGc(original_gc_);
-  delete myGc;
+  delete temp_logging_gc;
 }
 
 // 
-const TImplementationProxy ImplementationTable[] = {
+const TImplementationProxy kImplementationTable[] = {
         IMPLEMENTATION_PROXY_ENTRY(0x20006E90, TtsProtoFepPlugin::NewL) };
 
-EXPORT_C const TImplementationProxy* ImplementationGroupProxy(TInt& aTableCount) {
-  aTableCount = sizeof(ImplementationTable) / sizeof(TImplementationProxy);
-  return ImplementationTable;
+EXPORT_C const TImplementationProxy* ImplementationGroupProxy(
+    TInt& table_count_out) {
+  table_count_out = sizeof(kImplementationTable) / sizeof(TImplementationProxy);
+  return kImplementationTable;
 }
