@@ -1,6 +1,9 @@
 #include "control_walker.h"
 
+#include <aknlistquerycontrol.h>
 #include <aknlists.h> 
+#include <aknquerydialog.h>
+#include <aknselectionlist.h>
 #include <eikappui.h>
 #include <eikedwin.h>
 #include <eikenv.h>
@@ -12,9 +15,13 @@ namespace {
 typedef void (CCoeControl::*DrawFunc)(const TRect& aRect) const;
 }  // namespace
 
+// CCoeControl declares an internal class called CCoeRedrawer as a friend.
+// We can declare our own class with that name as a convenient way to access
+// private parts of CCoeControl.
 class CCoeRedrawer {
  public:
   inline static DrawFunc GetDraw(CCoeControl* ctrl) { return &ctrl->Draw; }
+  inline static RWindow* Window(CCoeControl* ctrl) { return &ctrl->Window(); }
 };
 
 namespace {
@@ -48,7 +55,20 @@ void Report(CEikTextListBox* listbox, LoggingState* logger) {
   buf.Append(_L(": "));
   const TDesC& text = model->ItemText(listbox->CurrentItemIndex());
   buf.Append(text.Left(50));
-  logger->Log(text);
+  logger->Log(buf);
+}
+
+void Report(CEikListBox* listbox, LoggingState* logger) {
+  MListBoxModel* model = listbox->Model();
+  const MDesCArray* array = model->MatchableTextArray();
+  TBuf<80> buf = _L("Item ");
+  buf.AppendNum(listbox->CurrentItemIndex());
+  buf.Append(_L(" of "));
+  buf.AppendNum(model->NumberOfItems());
+  buf.Append(_L(": "));
+  const TDesC& text = array->MdcaPoint(listbox->CurrentItemIndex());
+  buf.Append(text.Left(50));
+  logger->Log(buf);
 }
 
 void Report(CAknGrid* grid, LoggingState* logger) {
@@ -60,7 +80,61 @@ void Report(CAknGrid* grid, LoggingState* logger) {
   buf.Append(_L(": "));
   const TDesC& text = model->ItemText(grid->CurrentItemIndex());
   buf.Append(text.Left(50));
-  logger->Log(text);
+  logger->Log(buf);
+}
+
+void Report(CAknDialog* dialog, LoggingState* logger) {
+}
+
+class AccessSelectionListDialog : public CAknSelectionListDialog {
+ public:
+  AccessSelectionListDialog(CDesC16Array* array)
+      : CAknSelectionListDialog(item, array, NULL) {
+  }
+  CEikListBox* list() { return ListBox(); }
+ private:
+  TInt item;
+};
+
+void Report(CAknSelectionListDialog* dialog, LoggingState* logger) {
+  AccessSelectionListDialog* access = (AccessSelectionListDialog*)dialog;
+  Report(access->list(), logger);
+}
+
+// A heuristic check for CEikTextListBox-derived classes: check if they
+// seem to have a reasonable CTextListBoxModel Model().
+CEikTextListBox* IsEikTextListBox(CCoeControl* control) {
+  CEikTextListBox* list = (CEikTextListBox*)control;
+  CTextListBoxModel* model = list->Model();
+  CEikTextListBox* ret = NULL;
+  void* model_p = (void*)model;
+  // The pointer should be aligned and within the heap.
+  if ( (TUint)model_p % 4 == 0 &&
+      model_p > User::Heap().Base() &&
+      model_p < User::Heap().Base() + User::Heap().Size()) {
+    CTextListBoxModel* created = new (ELeave) CTextListBoxModel;
+    void* created_p = (void*)created;
+    // And point to a CTextListBoxModel vtable.
+    if (*(void**)model_p == *(void**)created_p) {
+      ret = list;
+    }
+    delete created;
+  }
+  return ret;
+}
+
+CAknSelectionListDialog* IsAknSelectionListDialog(CCoeControl* control) {
+  CDesC16ArrayFlat* array = new (ELeave) CDesC16ArrayFlat(1);
+  AccessSelectionListDialog* created =
+      new (ELeave) AccessSelectionListDialog(array);
+  if (*(void**)created == *(void**)control) {
+    delete created;
+    delete array;
+    return (CAknSelectionListDialog*)control;
+  }
+  delete created;
+  delete array;
+  return NULL;
 }
 
 struct ClassSig {
@@ -124,6 +198,19 @@ void InspectControl(CCoeControl* control, LoggingState* logger) {
       return;
     }
   }
+  CEikTextListBox* list = IsEikTextListBox(control);
+  if (list) {
+    logger->Log(_L("CEikTextListBox"));
+    Report(list, logger);
+    return;
+  }
+  CAknSelectionListDialog* dialog = IsAknSelectionListDialog(control);
+  if (dialog) {
+    logger->Log(_L("CAknSelectionListDialog"));
+    Report(dialog, logger);
+    return;    
+  }
+
 #if 0
   int best_match_score = 0;
   const ClassSig* best_match = NULL;
@@ -180,6 +267,21 @@ void WalkOne(CCoeControl* control, LoggingState* logger) {
   }
   logger->DecreaseIndent();
 }
+
+void WalkWindows(CEikonEnv* env, LoggingState* logger) {
+  RWindowGroup* wg = &env->RootWin();
+  TUint32 handle = wg->Child();
+  while (handle) {
+    CCoeControl* control = (CCoeControl*)handle;
+    WalkOne(control, logger);
+    RWindow* window = CCoeRedrawer::Window(control);
+    if (!window) {
+      handle = 0;
+    } else {
+      handle = window->NextSibling();
+    }
+  }
+}
 }  // namespace
 
 ControlWalker::ControlWalker() : CActive(CActive::EPriorityLow) {
@@ -206,5 +308,8 @@ void ControlWalker::RunL() {
 void ControlWalker::Walk(LoggingState* logger) {
   CEikonEnv* env = CEikonEnv::Static();
   CCoeControl* top = env->AppUi()->TopFocusedControl();
+  logger->Log(_L("From TopFocusedControl"));
   WalkOne(top, logger);
+  logger->Log(_L("From RootWin()"));
+  WalkWindows(env, logger);
 }

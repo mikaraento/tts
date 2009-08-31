@@ -1,7 +1,7 @@
 // This file is meant to be included multiple times. For more details, see
 // control_walker.cpp
 
-//CONTROL(CEikEdwin)
+CONTROL(CEikEdwin)
 CONTROL(CEikLabel)
 CONTROL(CAknColumnListBox)
 CONTROL(CAknSingleStyleListBox)
@@ -41,3 +41,6 @@ CONTROL(CAknFormGraphicWideStyleListBox)
 CONTROL(CAknPinbStyleGrid)
 CONTROL(CAknQdialStyleGrid)
 CONTROL(CAknCaleMonthStyleGrid)
+CONTROL(CEikTextListBox)
+CONTROL(CAknDialog)
+//CONTROL(CAknListQueryControl)
