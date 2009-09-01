@@ -6,6 +6,8 @@
 class ControlWalker;
 class CWindowGc;
 class FepProxy;
+class ForegroundWalkTriggerer;
+class KeyPressWalkTriggerer;
 
 // TtsProtoFepPlugin is the bootstrap class for the TTS FEP: it gets loaded
 // by CCoeEnv::InstallFepL(), it instantiates an AKNFEP CCoeFep and starts
@@ -28,6 +30,8 @@ class TtsProtoFepPlugin: public CCoeFepPlugIn {
   CWindowGc* original_gc_;
   char original_gc_vtbl_[4];
   ControlWalker* walker_;
+  ForegroundWalkTriggerer* triggerer_;
+  KeyPressWalkTriggerer* key_triggerer_;
 };
 
 #endif  // MYFEPPLUGIN_H_

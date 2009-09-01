@@ -16,6 +16,11 @@ public:
   // from CCoeFep
   virtual void CancelTransaction();
   virtual void IsOnHasChangedState();
+  // The following three functions are deprecated but need to be defined when
+  // compiling for < FP2.
+  virtual void OfferKeyEventL(TEventResponse& /*aEventResponse*/, const TKeyEvent& /*aKeyEvent*/, TEventCode /*aEventCode*/){};
+  virtual void OfferPointerEventL(TEventResponse& /*aEventResponse*/, const TPointerEvent& /*aPointerEvent*/, const CCoeControl* /*aWindowOwningControl*/){};
+  virtual void OfferPointerBufferReadyEventL(TEventResponse& /*aEventResponse*/, const CCoeControl* /*aWindowOwningControl*/){};
 
   // from MCoeFocusObserver
   virtual void HandleChangeInFocus();

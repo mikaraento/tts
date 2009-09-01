@@ -1,14 +1,71 @@
 #include "tts_proto_fep.h"
 
-#include <ImplementationProxy.h> // TImplementationProxy
-#include <coemain.h> // CCoeEnv
+#include <coeaui.h>
+#include <coecntrl.h>
+#include <coemain.h>
 #include <ecom/ecom.h>
+#include <eikenv.h>
 #include <fepbase.h>
+#include <implementationproxy.h>
 
 #include "control_walker.h"
 #include "fep_proxy.h"
 #include "logging_window_gc.h"
 #include "reporting.h"
+
+class ForegroundWalkTriggerer : public MCoeForegroundObserver {
+ public:
+  ForegroundWalkTriggerer(ControlWalker* walk, LoggingState* logger) {
+    walk_ = walk;
+    logger_ = logger;
+    CEikonEnv::Static()->AddForegroundObserverL(*this);
+  }
+  ~ForegroundWalkTriggerer() {
+    CEikonEnv::Static()->RemoveForegroundObserver(*this);
+  }
+ private:
+  virtual void HandleGainingForeground() {
+    walk_->TriggerWalk(logger_);
+  }
+  virtual void HandleLosingForeground() {}
+  ControlWalker* walk_;
+  LoggingState* logger_;
+};
+
+class KeyPressWalkTriggerer : public CCoeControl {
+ public:
+   KeyPressWalkTriggerer(ControlWalker* walk, LoggingState* logger) {
+    walk_ = walk;
+    logger_ = logger;
+  }
+  void ConstructL() {
+    // Set up a key catching control - front window, null size, non-focusing,
+    // added to stack for key events.
+    CreateWindowL();
+    SetNonFocusing();
+
+    RWindow& window = Window();
+    window.SetOrdinalPosition(0, ECoeWinPriorityFep);
+    TPoint fepControlPos(0, 0);
+
+    SetExtent(fepControlPos, TSize(0,0));
+    window.SetExtent(fepControlPos, TSize(0,0));
+    window.SetNonFading(ETrue);
+    ((CCoeAppUi*)iEikonEnv->AppUi())->AddToStackL(this,
+        ECoeStackPriorityFep, ECoeStackFlagSharable|ECoeStackFlagRefusesFocus);
+  }
+  ~KeyPressWalkTriggerer() {
+    ((CCoeAppUi*)iEikonEnv->AppUi())->RemoveFromStack(this);
+  }
+  TKeyResponse OfferKeyEventL(const TKeyEvent& /* aKeyEvent */,
+                              TEventCode /* aEventCode */) {
+    walk_->TriggerWalk(logger_);
+    return EKeyWasNotConsumed;
+  }
+ private:
+  ControlWalker* walk_;
+  LoggingState* logger_;
+};
 
 CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
   // The Phone application doesn't like the indirectly created AKNFEP. The
@@ -28,6 +85,15 @@ CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
     me.Close();
     User::Leave(KErrAlreadyExists);
   }
+  /*
+  if (me.FileName().CompareF(_L("z:\\sys\\bin\\phonebook.exe")) != 0) {
+    me.Close();
+    User::Leave(KErrAlreadyExists);
+  }
+  if (me.FileName().CompareF(_L("z:\\sys\\bin\\menu.exe")) != 0) {
+    me.Close();
+    User::Leave(KErrAlreadyExists);
+  }*/
   me.Close();
 
   TtsProtoFepPlugin* self = new (ELeave) TtsProtoFepPlugin;
@@ -45,13 +111,20 @@ TtsProtoFepPlugin::~TtsProtoFepPlugin() {
   if (original_gc_) {
     Mem::Copy(original_gc_, original_gc_vtbl_, 4);
   }
+  delete triggerer_;
+  delete key_triggerer_;
   delete walker_;
 }
 
 CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
                                     const CCoeFepParameters& aFepParameters) {
   walker_ = new (ELeave) ControlWalker;
-  walker_->TriggerWalk(LoggingState::Get());
+  // walker_->TriggerWalk(LoggingState::Get());
+  triggerer_ = new (ELeave) ForegroundWalkTriggerer(walker_,
+                                                    LoggingState::Get());
+  key_triggerer_ = new (ELeave) KeyPressWalkTriggerer(walker_,
+                                                      LoggingState::Get());
+  key_triggerer_->ConstructL();
 #if 0
   const TUid aknfepuid = { 0x101fd65a };
   akn_plugin_ = CCoeFepPlugIn::NewL(aknfepuid);
@@ -78,6 +151,9 @@ TtsProtoFepPlugin::TtsProtoFepPlugin() {
 
 void TtsProtoFepPlugin::ConstructL() {
   LoggingState::SetupTls();
+  
+  return;
+  
   CCoeEnv* env = CCoeEnv::Static();
   LoggingWindowGc* temp_logging_gc = new (ELeave) LoggingWindowGc(env->ScreenDevice());
   original_gc_ = env->SwapSystemGc(temp_logging_gc);
