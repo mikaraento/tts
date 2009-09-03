@@ -13,6 +13,8 @@
 #include "logging_window_gc.h"
 #include "reporting.h"
 
+// TODO(mikie): move the Triggerer classes to their own file and generalize
+// their action.
 class ForegroundWalkTriggerer : public MCoeForegroundObserver {
  public:
   ForegroundWalkTriggerer(ControlWalker* walk, LoggingState* logger) {

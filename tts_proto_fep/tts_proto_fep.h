@@ -3,6 +3,12 @@
 
 #include <fepplugin.h> // CCoeFepPlugIn
 
+
+// Note that although installing a new version of the FEP may succeed you may
+// still actually get the old one if it's not been fully unloaded. The sure
+// way to get the new one is to reboot the phone and only install with FepSetup
+// after that.
+
 class ControlWalker;
 class CWindowGc;
 class FepProxy;

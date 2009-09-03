@@ -1,0 +1,14 @@
+;Unique Vendor Name
+:"Karhea"
+
+;Languages
+&EN
+
+;Name,UID,Major,Minor,Build
+#{"TTS FEP Proto"},(0x20006E90),1,0,0,TYPE=SA
+
+;localised vendor names
+%{"Karhea"}
+
+"\symbian\9.1\s60_3rd_mr\epoc32\release\winscw\udeb\z\resource\plugins\tts_proto_fep_20006e90.rsc" - "!:\resource\plugins\tts_proto_fep_20006e90.rsc"
+"\symbian\9.1\s60_3rd_mr\epoc32\release\gcce\udeb\tts_proto_fep_20006e90.dll" - "!:\sys\bin\tts_proto_fep_20006e90.dll"

@@ -1,4 +1,17 @@
+// TODO(mikie): this code is still very experimental - it needs to be
+// made more performant at the very least, and a more structured reporting
+// function generated.
+
+// Something in the control introspection doesn't work right in a GCC-E
+// release build - build for debug.
+
 #include "control_walker.h"
+
+#include "modifed_system_include/akngrid.h"
+#include "modifed_system_include/aknsfld.h"
+#include "modifed_system_include/aknview.h"
+#include "modifed_system_include/coeaui.h"
+#include "modifed_system_include/eiklbx.h"
 
 #include <aknform.h> 
 #include <aknlistquerycontrol.h>
@@ -8,6 +21,7 @@
 #include <aknsfld.h>
 #include <aknsutils.h>
 #include <akntitle.h>
+#include <aknviewappui.h>
 #include <eikappui.h>
 #include <eikdpage.h>
 #include <eikedwin.h>
@@ -16,21 +30,13 @@
 #include <eikspane.h>
 #include <frmtview.h> 
 
-#include "modifed_system_include/akngrid.h"
-#include "modifed_system_include/aknsfld.h"
-#include "modifed_system_include/eiklbx.h"
 #include "reporting.h"
-
-namespace {
-typedef void (CCoeControl::*DrawFunc)(const TRect& aRect) const;
-}  // namespace
 
 // CCoeControl declares an internal class called CCoeRedrawer as a friend.
 // We can declare our own class with that name as a convenient way to access
 // private parts of CCoeControl.
 class CCoeRedrawer {
  public:
-  inline static DrawFunc GetDraw(CCoeControl* ctrl) { return &ctrl->Draw; }
   inline static RWindow* Window(CCoeControl* ctrl) { return &ctrl->Window(); }
 };
 
@@ -52,41 +58,56 @@ void Report(CEikEdwin* edwin, LoggingState* logger) {
 }
 
 void Report(CEikTextListBox* listbox, LoggingState* logger) {
+  if (!listbox->View()) return;
   CTextListBoxModel* model = listbox->Model();
-  TBuf<80> buf = _L("Item ");
-  buf.AppendNum(listbox->CurrentItemIndex() + 1);
-  buf.Append(_L(" of "));
-  buf.AppendNum(model->NumberOfItems());
-  buf.Append(_L(": "));
-  const TDesC& text = model->ItemText(listbox->CurrentItemIndex());
-  buf.Append(text.Left(50));
-  logger->Log(buf);
+  if (model->NumberOfItems() > 0) {
+    TBuf<80> buf = _L("Item ");
+    buf.AppendNum(listbox->CurrentItemIndex() + 1);
+    buf.Append(_L(" of "));
+    buf.AppendNum(model->NumberOfItems());
+    buf.Append(_L(": "));
+    const TDesC& text = model->ItemText(listbox->CurrentItemIndex());
+    buf.Append(text.Left(50));
+    logger->Log(buf);
+  } else {
+    logger->Log(_L("empty"));
+  }
 }
 
 void Report(CEikListBox* listbox, LoggingState* logger) {
   if (!listbox) return;
+  if (!listbox->View()) return;
   MListBoxModel* model = listbox->Model();
-  const MDesCArray* array = model->MatchableTextArray();
-  TBuf<80> buf = _L("Item ");
-  buf.AppendNum(listbox->CurrentItemIndex() + 1);
-  buf.Append(_L(" of "));
-  buf.AppendNum(model->NumberOfItems());
-  buf.Append(_L(": "));
-  const TDesC& text = array->MdcaPoint(listbox->CurrentItemIndex());
-  buf.Append(text.Left(50));
-  logger->Log(buf);
+  if (model->NumberOfItems() > 0) {
+    const MDesCArray* array = model->MatchableTextArray();
+    TBuf<80> buf = _L("Item ");
+    buf.AppendNum(listbox->CurrentItemIndex() + 1);
+    buf.Append(_L(" of "));
+    buf.AppendNum(model->NumberOfItems());
+    buf.Append(_L(": "));
+    const TDesC& text = array->MdcaPoint(listbox->CurrentItemIndex());
+    buf.Append(text.Left(50));
+    logger->Log(buf);
+  } else {
+    logger->Log(_L("empty"));
+  }
 }
 
 void Report(CAknGrid* grid, LoggingState* logger) {
+  if (!grid->View()) return;
   CTextListBoxModel* model = grid->Model();
-  TBuf<80> buf = _L("Item ");
-  buf.AppendNum(grid->CurrentItemIndex());
-  buf.Append(_L(" of "));
-  buf.AppendNum(model->NumberOfItems());
-  buf.Append(_L(": "));
-  const TDesC& text = model->ItemText(grid->CurrentItemIndex());
-  buf.Append(text.Left(50));
-  logger->Log(buf);
+  if (model->NumberOfItems() > 0) {
+    TBuf<80> buf = _L("Item ");
+    buf.AppendNum(grid->CurrentItemIndex());
+    buf.Append(_L(" of "));
+    buf.AppendNum(model->NumberOfItems());
+    buf.Append(_L(": "));
+    const TDesC& text = model->ItemText(grid->CurrentItemIndex());
+    buf.Append(text.Left(50));
+    logger->Log(buf);
+  } else {
+    logger->Log(*grid->EmptyGridText());
+  }
 }
 
 void Report(CAknSearchField* field, LoggingState* logger) {
@@ -148,19 +169,24 @@ typedef RHeap::SCell Cell;
 typedef RHeap::SDebugCell Cell;
 #endif
 
+bool IsValidPointer(void* p) {
+  return (TUint)p % 4 == 0 &&
+         p > User::Heap().Base() &&
+         p < User::Heap().Base() + User::Heap().Size();
+}
+
 // A heuristic check for CEikListBox-derived classes: check if they
 // seem to have reasonable internals.
 CEikListBox* IsEikListBox(CCoeControl* control) {
-  CEikListBox* list = (CEikListBox*)control;
-  MListBoxModel* model = list->Model();
+  CEikListBoxAccess* list = (CEikListBoxAccess*)control;
+  MListBoxModel* model = list->iModel;
+  CListBoxView* view = list->iView;
   CEikListBox* ret = NULL;
   void* model_p = (void*)model;
   Cell* allocation = (Cell*)((char*)control - sizeof(Cell));
   if (allocation->len < sizeof(CEikListBox)) return NULL;
   // The pointer should be aligned and within the heap.
-  if ( (TUint)model_p % 4 == 0 &&
-      model_p > User::Heap().Base() &&
-      model_p < User::Heap().Base() + User::Heap().Size()) {
+  if (IsValidPointer(model) && IsValidPointer(view)) {
     CEikListBoxAccess* access = (CEikListBoxAccess*)control;
     const int item_height = access->iItemHeight;
     const int sb_frame_owned = access->iSBFrameOwned;
@@ -170,7 +196,7 @@ CEikListBox* IsEikListBox(CCoeControl* control) {
         (sb_frame_owned == 0 || sb_frame_owned == 1) &&
         adj > -500 && adj < 500 &&
         required_height >= 0 && required_height < 100) {
-      ret = list;
+      ret = (CEikListBox*)control;
     }
   }
   return ret;
@@ -185,8 +211,8 @@ CAknGrid* IsAknGrid(CCoeControl* control) {
   const int rows = access->iNumOfRowsInView;
   if (min_width >= 0 && min_width < 500 &&
       (current_is_valid == (int)EFalse || current_is_valid == (int)ETrue) &&
-      cols >= 0 && cols < 500 &&
-      rows >= 0 && rows < 500) {
+      cols > 0 && cols < 50 &&
+      rows > 0 && rows < 50) {
     return (CAknGrid*)control;
   }
   return NULL;
@@ -226,6 +252,26 @@ CAknSearchField* IsAknSearchField(CCoeControl* control) {
   return NULL;
 }
 
+CEikEdwin* IsEikEdwin(CCoeControl* control) {
+  CEikEdwin* created = new CEikEdwin;
+  if (*(void**)created == *(void**)control) {
+    delete created;
+    return (CEikEdwin*)control;
+  }
+  delete created;
+  return NULL;
+}
+
+CEikLabel* IsEikLabel(CCoeControl* control) {
+  CEikLabel* created = new CEikLabel;
+  if (*(void**)created == *(void**)control) {
+    delete created;
+    return (CEikLabel*)control;
+  }
+  delete created;
+  return NULL;
+}
+
 // We want to be able detect known control class instances with the minimum
 // fuss, so we we write the necessary reporting functions and generate a lookup
 // table.
@@ -233,20 +279,14 @@ CAknSearchField* IsAknSearchField(CCoeControl* control) {
 struct ClassSig {
   const unsigned char* class_name;
   void* (*GetVTableAddress)(void);
-  DrawFunc (*GetDrawAddress)(void);
   void (*ReportState)(CCoeControl* control, LoggingState* logger);
 };
 
+#ifdef __WINS__
 #define CONTROL(name) \
   void* Get ## name ## VTable() { \
     name * o = new (ELeave) name; \
     void* ptr = *(void**)o; \
-    delete o; \
-    return ptr; \
-  } \
-  DrawFunc Get ## name ## Draw() { \
-    CCoeControl * o = new (ELeave) name; \
-    DrawFunc ptr = CCoeRedrawer::GetDraw(o); \
     delete o; \
     return ptr; \
   } \
@@ -261,7 +301,6 @@ struct ClassSig {
 #define CONTROL(name) \
   { TEXT(name), \
     & Get ## name ## VTable, \
-    & Get ## name ## Draw, \
     & Report ## name ## State },
 
 ClassSig classes[] = {
@@ -270,6 +309,14 @@ ClassSig classes[] = {
 };
 #undef CONTROL
 #undef TEXT
+
+#else  // !__WINS__
+
+ClassSig classes[] = {
+  { 0 },
+};
+
+#endif  // __WINS__
 
 void ReportWithSig(const ClassSig* control_class,
                    CCoeControl* control,
@@ -322,6 +369,18 @@ void InspectControl(CCoeControl* control, LoggingState* logger) {
     Report(searchfield, logger);
     return;    
   }
+  CEikEdwin* edwin = IsEikEdwin(control);
+  if (edwin) {
+    logger->Log(_L("CEikEdwin"));
+    Report(edwin, logger);
+    return;    
+  }
+  CEikLabel* label = IsEikLabel(control);
+  if (label) {
+    logger->Log(_L("CEikLabel"));
+    Report(label, logger);
+    return;    
+  }
 
   // I also experimented with matching method pointers and vtables but was
   // not able to weed out the false positives.
@@ -345,6 +404,8 @@ void WalkOne(CCoeControl* control, LoggingState* logger) {
   logger->Log(buf);
   InspectControl(control, logger);
   {
+    // These variables make it easy to check whether an unknown control
+    // looks like a known type under interactive debugging.
     CEikListBox* list = (CEikListBox*)control;
     CAknDialog* dialog = (CAknDialog*)control;
     CTextView* textv = (CTextView*)control;
@@ -362,7 +423,7 @@ void WalkOne(CCoeControl* control, LoggingState* logger) {
   logger->DecreaseIndent();
 }
 
-void WalkWindows(TUint32 handle, LoggingState* logger) {
+void WalkWindows(TUint32 handle, LoggingState* logger, TBool forward) {
   while (handle) {
     // With CEikonEnv the RWindow handle must always be a pointer to
     // a CCoeControl (see http://mikie.iki.fi/wordpress/?p=20).
@@ -372,8 +433,44 @@ void WalkWindows(TUint32 handle, LoggingState* logger) {
     if (!window) {
       handle = 0;
     } else {
-      handle = window->NextSibling();
+      if (forward) {
+        handle = window->NextSibling();
+      } else {
+        handle = window->PrevSibling();
+      }
     }
+  }
+}
+}  // namespace
+
+// From ER5 sources. On SOS 9 the length of an element is 16 instead of 12
+// so I've added an iUnknown field.
+struct SStackedControl
+    {
+    CCoeControl* iControl;
+    TInt iPriority;
+    TInt iFlags;
+    TInt iUnknown;
+    };
+
+class CCoeControlStack : public CArrayFixFlat<SStackedControl>
+    {
+public:
+    inline CCoeControlStack() : CArrayFixFlat<SStackedControl>(2) { } // granularity of two
+    TKeyResponse OfferKeyL(const TKeyEvent& aKeyEvent,TEventCode aType);
+public:
+    TInt iKeyIndex;
+    };
+
+namespace {
+void WalkStack(LoggingState* logger) {
+  CCoeAppUiAccess* appui = (CCoeAppUiAccess*)CEikonEnv::Static()->AppUi();
+  CCoeControlStack* stack = appui->iStack;
+  logger->Log(_L("From stack"));
+  for (int i = 0; i < stack->Count(); ++i) {
+    SStackedControl s = stack->At(i);
+    CCoeControl* control = s.iControl;
+    WalkOne(control, logger);
   }
 }
 }  // namespace
@@ -404,42 +501,76 @@ void ControlWalker::Walk(LoggingState* logger) {
   CEikonEnv* env = CEikonEnv::Static();
   
   TBuf<100> header;
-  CEikStatusPane* sp = CEikonEnv::Static()->AppUiFactory()->StatusPane();
-  CAknTitlePane* titlePane = NULL;
+  CEikStatusPane* sp = env->AppUiFactory()->StatusPane();
+  CAknTitlePane* title_pane = NULL;
   if (sp) {
-    titlePane = (CAknTitlePane*)
+    title_pane = (CAknTitlePane*)
         sp->ControlL(TUid::Uid(EEikStatusPaneUidTitle));
   }
-  if (titlePane) {
-    header.Append(titlePane->Text()->Left(50));
+  if (title_pane) {
+    header.Append(title_pane->Text()->Left(50));
   }
   header.Append(_L(" uid: "));
   RProcess me;
   me.Open(me.Id());
   TUint32 uid = me.SecureId().iId;
   header.AppendNum(uid, EHex);
+  if (uid == 0x101f4cd2) {
+    me.RenameMe(_L("Menu"));
+  }
   me.Close();
   CAknAppUi* appui = (CAknAppUi*)env->AppUi();
   TVwsViewId view_id;
   TInt view_found = appui->GetActiveViewId(view_id);
+  CCoeControl* cba = env->AppUiFactory()->Cba();
   if (view_found != KErrNotFound) {
     header.Append(_L(" view: "));
     header.AppendNum(view_id.iAppUid.iUid, EHex);
     header.Append(_L(" "));
     header.AppendNum(view_id.iViewUid.iUid, EHex);
+    if (!cba) {
+      CAknViewAppUi* viewappui = (CAknViewAppUi*)appui;
+      CAknView* view = viewappui->View(view_id.iViewUid);
+      if (view) cba = view->iCba;
+    }
   }
   logger->Log(header);
-  
-  CCoeControl* top = appui->TopFocusedControl();
-  logger->Log(_L("From TopFocusedControl"));
-  WalkOne(top, logger);
 
+  CCoeControl* top = appui->TopFocusedControl();
+  if (1) {
+    // TopFocusedControl() returns NULL in the menu on-device, so it's
+    // not good enough.
+    logger->Log(_L("From TopFocusedControl"));
+    WalkOne(top, logger);
+  }
+
+  WalkStack(logger);
+
+  if (1) {
+    // Walk all siblings of a known control. This doesn't work on-device
+    // for the menu either and is very expensive as the RWindow calls flush
+    // the window server command queue.
+    CCoeControl* from_control = cba;
+    if (!from_control) from_control = title_pane;
+    while (from_control) {
+      RWindow* window = CCoeRedrawer::Window(from_control);
+      if (window) {
+        logger->Log(_L("Windows from cba - forward"));
+        WalkWindows((TUint32)from_control, logger, ETrue);
+        logger->Log(_L("Windows from cba - back"));
+        WalkWindows((TUint32)from_control, logger, EFalse);
+        break;
+      }
+      from_control = from_control->Parent(); 
+    }
+  }
+  
   if (0) {
     // This walks controls by starting from the first child window of the
     // application window group. However, the handle of the first child
     // points to a non-window-owning 0-size control?
     logger->Log(_L("From RootWin()"));
-    WalkWindows(env->RootWin().Child(), logger);
+    WalkWindows(env->RootWin().Child(), logger, ETrue);
   }
 
   if (0) {
@@ -448,6 +579,6 @@ void ControlWalker::Walk(LoggingState* logger) {
     // we aren't really interested in them. It could be helpful for apps
     // that create several window-owning controls for main display.
     logger->Log(_L("From topmost window"));
-    WalkWindows((TUint32)top, logger);
+    WalkWindows((TUint32)top, logger, ETrue);
   }
 }
