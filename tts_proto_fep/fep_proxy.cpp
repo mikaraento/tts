@@ -3,6 +3,14 @@
 #include <eikenv.h>
 #include <fepplugin.h>
 
+// FEP loading works so that the previous FEP is kept loaded until the new
+// one completes loading.
+// Loading the AKNFEP while the previous instance is loaded causes problems
+// (guess it keeps state in TLS). Hence we load it afterwards, asynchronously.
+//
+// This does cause editors that are active to behave badly. I think the most
+// reasonable solution is to kill all running applications when the FEP
+// is installed by the production helper.
 class AknFepLoader : public CActive {
  public:
   AknFepLoader() : CActive(CActive::EPriorityStandard) {
@@ -24,10 +32,8 @@ class AknFepLoader : public CActive {
     akn_plugin_ = CCoeFepPlugIn::NewL(aknfepuid);
     CCoeEnv* env = CEikonEnv::Static();
     // the parameters are ignored.
-    //CCoeFepParameters* params = CCoeFepParameters::NewLC();
     CCoeFepParameters* params = NULL;
     akn_fep_ = akn_plugin_->NewFepL(*env, *params);
-    //CleanupStack::PopAndDestroy(params);
   }
   CCoeFep* fep() { return akn_fep_; }
   const CCoeFep* fep() const { return akn_fep_; }

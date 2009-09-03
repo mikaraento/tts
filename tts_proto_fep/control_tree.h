@@ -18,11 +18,11 @@ class ControlTree : public CBase {
  public:
   ControlTree();
   virtual ~ControlTree();
-  // All of the accessors may return NULL or an empty list.
   CEikonEnv* Env();
+  CAknAppUi* AppUi();
+  // All of the accessors below may return NULL or an empty list.
   CAknTitlePane* TitlePane();
   CEikButtonGroupContainer* Cba();
-  CAknAppUi* AppUi();
   CAknView* View();
   CEikMenuBar* MenuBar();
   typedef RArray<CCoeControl*> ControlArray;

@@ -8,6 +8,12 @@
 // the AppUi's or current view's MenuBar().
 // I might be missing something here :-(
 
+// We find the grid/list by looking for a window that has a control that
+// fills the client rect and picking a known child.
+// We find the current menu by looking through the windows and recognizing
+// a CEikMenuPane. Only do this if we have the Select/Cancel softkeys that
+// indicate a menu.
+
 #include <aknappui.h>
 #include <akngrid.h>
 #include <akntitle.h>
@@ -36,6 +42,7 @@ class CEikMenuPaneExtension {
 };
 
 void MenuReader::GetMainView() {
+  // We assume that the main container never goes away. May be unsafe.
   if (main_view_) return;
   TRect client_rect;
   TSize client_size;
@@ -64,6 +71,9 @@ void MenuReader::GetMainView() {
 
 void MenuReader::ReadMenuState(CEikMenuPane* pane) {
   if (pane) {
+    // We walk the menu hierarchy up as we may have found any odd pane
+    // from the windows. This is necessary so that caching the pane
+    // works even with cascaded menus.
     CEikMenuPane* owner = pane;
     pane = NULL;
     while (owner && owner != pane) {
@@ -71,9 +81,10 @@ void MenuReader::ReadMenuState(CEikMenuPane* pane) {
       owner = CEikMenuPaneExtension::Owner(pane);
     }
     latest_menu_pane_ = pane;
-    CCoeControl* parent = pane->Parent();
-    CEikMenuBar* bar = (CEikMenuBar*)parent;
     app_state_.SetIsShowingMenuOrPopup(ETrue);
+    // After that, let's walk down to the most cascaded menu. This will
+    // be the active one as cascaded menus are automatically removed
+    // when they leave focus.
     CEikMenuPane* cascade = pane;
     while (cascade) {
       pane = cascade;
@@ -81,6 +92,8 @@ void MenuReader::ReadMenuState(CEikMenuPane* pane) {
     }
     app_state_.SetItemCount(pane->NumberOfItemsInPane());
     if (pane->NumberOfItemsInPane() > 0) {
+      // A menu might not have any items even if it's the normal convention.
+      // 
       app_state_.SetSelectedItemIndex(pane->SelectedItem());
       const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
           pane->SelectedItem());
@@ -165,6 +178,8 @@ void MenuReader::Read() {
     // to find it.
     if (!latest_menu_pane_) {
       // This optimization may not be safe. Let's look and see.
+      // Since RefreshWindowList() is expensive we don't do it if the
+      // softkeys have stayed the same since the last time we found a menu.
       control_tree_.RefreshWindowList();
       const ControlTree::ControlArray& list = control_tree_.WindowList();
       for (int i = 0; i < list.Count(); ++i) {
@@ -191,6 +206,8 @@ void MenuReader::Read() {
       // This shows the brittleness of the code: the control layout is
       // different on the (3.0 MR) emulator than on the device. May need
       // tuning for different firmware versions of the same device too.
+      // Getting this wrong will crash. Could try to play safer by using
+      // the recognition from UnsafeTypes.
 #ifdef __WINS__
       CCoeControl* container = main_view_;
 #else
@@ -202,6 +219,8 @@ void MenuReader::Read() {
     }
   }
   if (listbox) {
+    // This works even if the menu is in list mode as lists and grids are
+    // almost the same.
     CAknGrid* grid = (CAknGrid*)listbox;
     CTextListBoxModel* model = grid->Model();
     app_state_.SetItemCount(model->NumberOfItems());
