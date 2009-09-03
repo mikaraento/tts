@@ -30,6 +30,7 @@
 #include <eikspane.h>
 #include <frmtview.h>
 
+#include "control_tree.h"
 #include "reporting.h"
 
 // CCoeControl declares an internal class called CCoeRedrawer as a friend.
@@ -460,6 +461,13 @@ void WalkWindows(TUint32 handle, LoggingState* logger, TBool forward) {
     }
   }
 }
+
+void WalkArray(const ControlTree::ControlArray& array, LoggingState* logger) {
+  for (int i = 0; i < array.Count(); ++i) {
+    WalkOne(array[i], logger, 0);
+  }
+}
+
 }  // namespace
 
 // From ER5 sources. On SOS 9 the length of an element is 16 instead of 12
@@ -520,12 +528,19 @@ void ControlWalker::Walk(LoggingState* logger) {
   CEikonEnv* env = CEikonEnv::Static();
 
   TBuf<100> header;
+#if 0
   CEikStatusPane* sp = env->AppUiFactory()->StatusPane();
   CAknTitlePane* title_pane = NULL;
   if (sp) {
     title_pane = (CAknTitlePane*)
         sp->ControlL(TUid::Uid(EEikStatusPaneUidTitle));
   }
+#else
+  ControlTree control_tree;
+  control_tree.RefreshControlStack();
+  control_tree.RefreshWindowList();
+  CAknTitlePane* title_pane = control_tree.TitlePane();
+#endif
   if (title_pane) {
     header.Append(title_pane->Text()->Left(50));
   }
@@ -535,7 +550,7 @@ void ControlWalker::Walk(LoggingState* logger) {
   RProcess me;
   me.Open(me.Id());
   const TUint32 uid = me.SecureId().iId;
-#if 0
+#if 1
   // You can easily log just one app by switching on uid here.
   if (uid != menu_uid) {
     me.Close();
@@ -550,7 +565,11 @@ void ControlWalker::Walk(LoggingState* logger) {
   CAknAppUi* appui = (CAknAppUi*)env->AppUi();
   TVwsViewId view_id;
   TInt view_found = appui->GetActiveViewId(view_id);
+#if 0
   CCoeControl* cba = env->AppUiFactory()->Cba();
+#else
+  CCoeControl* cba = control_tree.Cba();
+#endif
   if (view_found != KErrNotFound) {
     header.Append(_L(" view: "));
     header.AppendNum(view_id.iAppUid.iUid, EHex);
@@ -565,7 +584,11 @@ void ControlWalker::Walk(LoggingState* logger) {
   logger->Log(header);
   logger->IncreaseIndent();
 
+#if 0
   CCoeControl* top = appui->TopFocusedControl();
+#else
+  CCoeControl* top = control_tree.TopFocusedControl();
+#endif
   if (1) {
     // TopFocusedControl() returns NULL in the menu on-device, so it's
     // not good enough.
@@ -573,9 +596,14 @@ void ControlWalker::Walk(LoggingState* logger) {
     WalkOne(top, logger, 0);
   }
 
-  WalkStack(logger);
+  if (0) {
+    WalkStack(logger);
+  } else {
+    logger->Log(_L("From ControlStack"));
+    WalkArray(control_tree.ControlStack(), logger);
+  }
 
-  if (1) {
+  if (0) {
     // Walk all siblings of a known control. This is very expensive as
     // the RWindow calls flush the window server command queue.
     CCoeControl* from_control = cba;
@@ -591,6 +619,9 @@ void ControlWalker::Walk(LoggingState* logger) {
       }
       from_control = from_control->Parent();
     }
+  } else {
+    logger->Log(_L("From Windows"));
+    WalkArray(control_tree.WindowList(), logger);
   }
 
   if (0) {
