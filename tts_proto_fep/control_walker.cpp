@@ -32,6 +32,7 @@
 
 #include "control_tree.h"
 #include "reporting.h"
+#include "rtti.h"
 
 // CCoeControl declares an internal class called CCoeRedrawer as a friend.
 // We can declare our own class with that name as a convenient way to access
@@ -159,152 +160,6 @@ void Report(CAknSelectionListDialog* dialog, LoggingState* logger) {
   Report(access->list(), logger);
 }
 
-// A heuristic check for CEikTextListBox-derived classes: check if they
-// seem to have a reasonable CTextListBoxModel Model().
-CEikTextListBox* IsEikTextListBox(CCoeControl* control) {
-  CEikTextListBox* list = (CEikTextListBox*)control;
-  CTextListBoxModel* model = list->Model();
-  CEikTextListBox* ret = NULL;
-  void* model_p = (void*)model;
-  // The pointer should be aligned and within the heap.
-  if ( (TUint)model_p % 4 == 0 &&
-      model_p > User::Heap().Base() &&
-      model_p < User::Heap().Base() + User::Heap().Size()) {
-    CTextListBoxModel* created = new (ELeave) CTextListBoxModel;
-    void* created_p = (void*)created;
-    // And point to a CTextListBoxModel vtable.
-    if (*(void**)model_p == *(void**)created_p) {
-      ret = list;
-    }
-    delete created;
-  }
-  return ret;
-}
-
-#ifndef __WINS__
-typedef RHeap::SCell Cell;
-#else
-typedef RHeap::SDebugCell Cell;
-#endif
-
-bool IsValidPointer(void* p) {
-  return (TUint)p % 4 == 0 &&
-         p > User::Heap().Base() &&
-         p < User::Heap().Base() + User::Heap().Size();
-}
-
-// A heuristic check for CEikListBox-derived classes: check if they
-// seem to have reasonable internals.
-CEikListBox* IsEikListBox(CCoeControl* control) {
-  CEikListBoxAccess* list = (CEikListBoxAccess*)control;
-  MListBoxModel* model = list->iModel;
-  CListBoxView* view = list->iView;
-  CEikListBox* ret = NULL;
-  void* model_p = (void*)model;
-  Cell* allocation = (Cell*)((char*)control - sizeof(Cell));
-  if (allocation->len < sizeof(CEikListBox)) return NULL;
-  // The pointer should be aligned and within the heap.
-  if (IsValidPointer(model) && IsValidPointer(view)) {
-    CEikListBoxAccess* access = (CEikListBoxAccess*)control;
-    const int item_height = access->iItemHeight;
-    const int sb_frame_owned = access->iSBFrameOwned;
-    const int adj = access->iViewRectHeightAdjustment;
-    const int required_height = access->iRequiredHeightInNumOfItems;
-    if (item_height >= 0 && item_height < 500 &&
-        (sb_frame_owned == 0 || sb_frame_owned == 1) &&
-        adj > -500 && adj < 500 &&
-        required_height >= 0 && required_height < 100) {
-      ret = (CEikListBox*)control;
-    }
-  }
-  return ret;
-}
-
-CAknGrid* IsAknGrid(CCoeControl* control) {
-  if (!IsEikListBox(control)) return NULL;
-  CAknGridAccess* access = (CAknGridAccess*)control;
-  const int min_width = access->iMinColWidth;
-  const int current_is_valid = access->iCurrentIsValid;
-  const int cols = access->iNumOfColsInView;
-  const int rows = access->iNumOfRowsInView;
-  if (min_width >= 0 && min_width < 500 &&
-      (current_is_valid == (int)EFalse || current_is_valid == (int)ETrue) &&
-      cols > 0 && cols < 50 &&
-      rows > 0 && rows < 50) {
-    return (CAknGrid*)control;
-  }
-  return NULL;
-}
-
-CAknSelectionListDialog* IsAknSelectionListDialog(CCoeControl* control) {
-  CDesC16ArrayFlat* array = new (ELeave) CDesC16ArrayFlat(1);
-  AccessSelectionListDialog* created =
-      new (ELeave) AccessSelectionListDialog(array);
-  if (*(void**)created == *(void**)control) {
-    delete created;
-    delete array;
-    return (CAknSelectionListDialog*)control;
-  }
-  delete created;
-  delete array;
-  return NULL;
-}
-
-class EmptyControl : public CCoeControl {
- public:
-  void ConstructL() { CreateWindowL(); }
-};
-
-CAknSearchField* IsAknSearchField(CCoeControl* control) {
-  EmptyControl* parent = new (ELeave) EmptyControl;
-  parent->ConstructL();
-  CAknSearchField* created = CAknSearchField::NewL(
-      *parent, CAknSearchField::ESearch, NULL, 10);
-  if (*(void**)created == *(void**)control) {
-    delete created;
-    delete parent;
-    return (CAknSearchField*)control;
-  }
-  delete created;
-  delete parent;
-  return NULL;
-}
-
-CEikEdwin* IsEikEdwin(CCoeControl* control) {
-  CEikEdwin* created = new CEikEdwin;
-  if (*(void**)created == *(void**)control) {
-    delete created;
-    return (CEikEdwin*)control;
-  }
-  delete created;
-  return NULL;
-}
-
-CEikLabel* IsEikLabel(CCoeControl* control) {
-  CEikLabel* created = new CEikLabel;
-  if (*(void**)created == *(void**)control) {
-    delete created;
-    return (CEikLabel*)control;
-  }
-  delete created;
-  return NULL;
-}
-
-class EikMenuObserver : public MEikMenuObserver {
-  virtual void SetEmphasis(CCoeControl* aMenuControl,TBool aEmphasis) {}
-  virtual void ProcessCommandL(TInt aCommandId) {}
-};
-
-CEikMenuPane* IsEikMenuPane(CCoeControl* control) {
-  EikMenuObserver obs;
-  CEikMenuPane* created = new CEikMenuPane(&obs);
-  if (*(void**)created == *(void**)control) {
-    delete created;
-    return (CEikMenuPane*)control;
-  }
-  delete created;
-  return NULL;
-}
 
 // We want to be able detect known control class instances with the minimum
 // fuss, so we we write the necessary reporting functions and generate a lookup
@@ -380,50 +235,53 @@ void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
       return;
     }
   }
-  CEikTextListBox* list = IsEikTextListBox(control);
+  SafeTypes safe;
+  UnsafeTypes unsafe;
+  CEikTextListBox* list = unsafe.IsEikTextListBox(control);
   if (list) {
     logger->Log(_L("CEikTextListBox"));
     Report(list, logger);
     return;
   }
   // CAknGrid derives from CEikListBox, let's check for it first.
-  CAknGrid* grid = IsAknGrid(control);
+  CAknGrid* grid = unsafe.IsAknGrid(control);
   if (grid) {
     logger->Log(_L("CAknGrid"));
     Report(grid, logger);
     return;
   }
-  CEikListBox* list2 = IsEikListBox(control);
+  CEikListBox* list2 = unsafe.IsEikListBox(control);
   if (list2) {
     logger->Log(_L("CEikListBox"));
     Report(list2, logger);
     return;
   }
+  /*
   CAknSelectionListDialog* dialog = IsAknSelectionListDialog(control);
   if (dialog) {
     logger->Log(_L("CAknSelectionListDialog"));
     Report(dialog, logger);
     return;
-  }
-  CAknSearchField* searchfield = IsAknSearchField(control);
+  }*/
+  CAknSearchField* searchfield = safe.IsAknSearchField(control);
   if (searchfield) {
     logger->Log(_L("CAknSearchField"));
     Report(searchfield, logger);
     return;
   }
-  CEikEdwin* edwin = IsEikEdwin(control);
+  CEikEdwin* edwin = safe.IsEikEdwin(control);
   if (edwin) {
     logger->Log(_L("CEikEdwin"));
     Report(edwin, logger);
     return;
   }
-  CEikLabel* label = IsEikLabel(control);
+  CEikLabel* label = safe.IsEikLabel(control);
   if (label) {
     logger->Log(_L("CEikLabel"));
     Report(label, logger);
     return;
   }
-  CEikMenuPane* menubar = IsEikMenuPane(control);
+  CEikMenuPane* menubar = safe.IsEikMenuPane(control);
   if (menubar) {
     logger->Log(_L("CEikMenuPane"));
     Report(menubar, logger);

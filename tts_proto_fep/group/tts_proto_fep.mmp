@@ -16,6 +16,7 @@ SOURCE          control_tree.cpp
 SOURCE          control_walker.cpp
 SOURCE          fep_proxy.cpp
 SOURCE          logging_window_gc.cpp
+SOURCE          rtti.cpp
 SOURCE          trigger.cpp
 SOURCE          tts_proto_fep.cpp
 SOURCE          app_readers\contacts.cpp
