@@ -15,6 +15,9 @@ class CEikTextListBox;
 // 'RTTI': classes for determining or guessing the class of objects at
 // run-time.
 
+// TODO(mikie): cache all the vtable addresses. Will be done as the methods
+// are used in non-development-mode code.
+
 // IsValidPointer checks that the given address is word-aligned and within
 // the thread heap.
 bool IsValidPointer(void* p);
