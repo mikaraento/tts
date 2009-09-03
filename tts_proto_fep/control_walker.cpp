@@ -502,27 +502,9 @@ void WalkStack(LoggingState* logger) {
 }
 }  // namespace
 
-ControlWalker::ControlWalker() : CActive(CActive::EPriorityLow) {
-  CActiveScheduler::Add(this);
-}
+ControlWalker::ControlWalker() {}
 
-ControlWalker::~ControlWalker() {
-  Cancel();
-}
-
-void ControlWalker::TriggerWalk(LoggingState* logger) {
-  if (IsActive()) return;
-  logger_ = logger;
-  TRequestStatus* s = &iStatus;
-  User::RequestComplete(s, KErrNone);
-  SetActive();
-}
-
-void ControlWalker::DoCancel() { }
-
-void ControlWalker::RunL() {
-  Walk(logger_);
-}
+ControlWalker::~ControlWalker() {}
 
 void ControlWalker::Walk(LoggingState* logger) {
   CEikonEnv* env = CEikonEnv::Static();
@@ -541,7 +523,7 @@ void ControlWalker::Walk(LoggingState* logger) {
   RProcess me;
   me.Open(me.Id());
   const TUint32 uid = me.SecureId().iId;
-#if 1
+#if 0
   // You can easily log just one app by switching on uid here.
   if (uid != menu_uid) {
     me.Close();

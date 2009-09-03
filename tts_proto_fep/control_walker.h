@@ -9,15 +9,12 @@ class LoggingState;
 // known classes.
 // As a first step, it just prints the hierarchy and class names via the
 // LoggingState.
-class ControlWalker : public CActive{
+class ControlWalker : public CBase {
  public:
   ControlWalker();
   ~ControlWalker();
-  void TriggerWalk(LoggingState* logger);
- private:
-  void RunL();
-  void DoCancel();
   void Walk(LoggingState* logger);
+ private:
   LoggingState* logger_;
 };
 

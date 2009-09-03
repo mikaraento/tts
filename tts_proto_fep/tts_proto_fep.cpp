@@ -17,7 +17,7 @@
 // their action.
 class ForegroundWalkTriggerer : public CBase, public MCoeForegroundObserver {
  public:
-  ForegroundWalkTriggerer(ControlWalker* walk, LoggingState* logger) {
+  ForegroundWalkTriggerer(TriggerInterface* walk, LoggingState* logger) {
     walk_ = walk;
     logger_ = logger;
     CEikonEnv::Static()->AddForegroundObserverL(*this);
@@ -27,16 +27,16 @@ class ForegroundWalkTriggerer : public CBase, public MCoeForegroundObserver {
   }
  private:
   virtual void HandleGainingForeground() {
-    walk_->TriggerWalk(logger_);
+    walk_->OnTrigger();
   }
   virtual void HandleLosingForeground() {}
-  ControlWalker* walk_;
+  TriggerInterface* walk_;
   LoggingState* logger_;
 };
 
 class KeyPressWalkTriggerer : public CCoeControl {
  public:
-  KeyPressWalkTriggerer(ControlWalker* walk, LoggingState* logger) {
+  KeyPressWalkTriggerer(TriggerInterface* walk, LoggingState* logger) {
     walk_ = walk;
     logger_ = logger;
   }
@@ -61,12 +61,12 @@ class KeyPressWalkTriggerer : public CCoeControl {
   }
   virtual TKeyResponse OfferKeyEventL(const TKeyEvent& /* aKeyEvent */,
                               TEventCode /* aEventCode */) {
-    walk_->TriggerWalk(logger_);
+    walk_->OnTrigger();
     return EKeyWasNotConsumed;
   }
 
  private:
-  ControlWalker* walk_;
+  TriggerInterface* walk_;
   LoggingState* logger_;
 };
 
@@ -117,15 +117,17 @@ TtsProtoFepPlugin::~TtsProtoFepPlugin() {
   delete triggerer_;
   delete key_triggerer_;
   delete walker_;
+  delete async_trigger_;
 }
 
 CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
                                     const CCoeFepParameters& aFepParameters) {
+  async_trigger_ = new (ELeave) AsyncTrigger(this);
   walker_ = new (ELeave) ControlWalker;
   // walker_->TriggerWalk(LoggingState::Get());
-  triggerer_ = new (ELeave) ForegroundWalkTriggerer(walker_,
+  triggerer_ = new (ELeave) ForegroundWalkTriggerer(async_trigger_,
                                                     LoggingState::Get());
-  key_triggerer_ = new (ELeave) KeyPressWalkTriggerer(walker_,
+  key_triggerer_ = new (ELeave) KeyPressWalkTriggerer(async_trigger_,
                                                       LoggingState::Get());
   key_triggerer_->ConstructL();
 #if 0
@@ -166,6 +168,10 @@ void TtsProtoFepPlugin::ConstructL() {
   delete temp_logging_gc;
 }
 
+void TtsProtoFepPlugin::OnTrigger() {
+  walker_->Walk(LoggingState::Get());
+}
+                       
 //
 const TImplementationProxy kImplementationTable[] = {
         IMPLEMENTATION_PROXY_ENTRY(0x20006E90, TtsProtoFepPlugin::NewL) };
