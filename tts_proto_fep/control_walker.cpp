@@ -327,7 +327,7 @@ void ReportWithSig(const ClassSig* control_class,
   (*(control_class->ReportState))(control, logger);  
 }
 
-void InspectControl(CCoeControl* control, LoggingState* logger) {
+void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
   void* vtable = *(void**)control;
   for (const ClassSig* control_class = classes;
        control_class->class_name;
@@ -367,7 +367,7 @@ void InspectControl(CCoeControl* control, LoggingState* logger) {
   if (searchfield) {
     logger->Log(_L("CAknSearchField"));
     Report(searchfield, logger);
-    return;    
+    return;
   }
   CEikEdwin* edwin = IsEikEdwin(control);
   if (edwin) {
@@ -381,6 +381,17 @@ void InspectControl(CCoeControl* control, LoggingState* logger) {
     Report(label, logger);
     return;    
   }
+#if 0 
+  // HACKHACK. This code was used to verify that a certain control indeed
+  // is the grid in the app menu.
+  if (depth == 2 &&
+      control->Size().iWidth == 238 &&
+      control->Size().iHeight == 264) {
+    logger->Log(_L("CAknGrid"));
+    Report((CAknGrid*)control, logger);
+    return;    
+  }
+#endif
 
   // I also experimented with matching method pointers and vtables but was
   // not able to weed out the false positives.
@@ -388,7 +399,7 @@ void InspectControl(CCoeControl* control, LoggingState* logger) {
   logger->Log(_L("unknown"));
 }
 
-void WalkOne(CCoeControl* control, LoggingState* logger) {
+void WalkOne(CCoeControl* control, LoggingState* logger, int depth) {
   if (!control) return;
   const int child_count = control->CountComponentControls();
   TBuf<100> buf = _L("pos ");
@@ -402,7 +413,7 @@ void WalkOne(CCoeControl* control, LoggingState* logger) {
   buf.Append(_L(" children "));
   buf.AppendNum(child_count);
   logger->Log(buf);
-  InspectControl(control, logger);
+  InspectControl(control, logger, depth);
   {
     // These variables make it easy to check whether an unknown control
     // looks like a known type under interactive debugging.
@@ -418,7 +429,7 @@ void WalkOne(CCoeControl* control, LoggingState* logger) {
   if (child_count == 0) return;
   logger->IncreaseIndent();
   for (int i = 0; i < child_count; ++i) {
-    WalkOne(control->ComponentControl(i), logger);
+    WalkOne(control->ComponentControl(i), logger, depth + 1);
   }
   logger->DecreaseIndent();
 }
@@ -428,7 +439,7 @@ void WalkWindows(TUint32 handle, LoggingState* logger, TBool forward) {
     // With CEikonEnv the RWindow handle must always be a pointer to
     // a CCoeControl (see http://mikie.iki.fi/wordpress/?p=20).
     CCoeControl* control = (CCoeControl*)handle;
-    WalkOne(control, logger);
+    WalkOne(control, logger, 0);
     RWindow* window = CCoeRedrawer::Window(control);
     if (!window) {
       handle = 0;
@@ -470,7 +481,7 @@ void WalkStack(LoggingState* logger) {
   for (int i = 0; i < stack->Count(); ++i) {
     SStackedControl s = stack->At(i);
     CCoeControl* control = s.iControl;
-    WalkOne(control, logger);
+    WalkOne(control, logger, 0);
   }
 }
 }  // namespace
@@ -510,14 +521,23 @@ void ControlWalker::Walk(LoggingState* logger) {
   if (title_pane) {
     header.Append(title_pane->Text()->Left(50));
   }
-  header.Append(_L(" uid: "));
+  const TUint32 fepsetup_uid = 0xe0003473;
+  const TUint32 menu_uid = 0x101f4cd2;
+
   RProcess me;
   me.Open(me.Id());
-  TUint32 uid = me.SecureId().iId;
-  header.AppendNum(uid, EHex);
-  if (uid == 0x101f4cd2) {
-    me.RenameMe(_L("Menu"));
+  const TUint32 uid = me.SecureId().iId;
+#if 0
+  // You can easily log just one app by switching on uid here.
+  if (uid != menu_uid) {
+    me.Close();
+    return;
   }
+#endif
+  header.Append(_L(" uid: "));
+  header.AppendNum(uid, EHex);
+  header.Append(_L(" process_id: "));
+  header.AppendNum(me.Id());
   me.Close();
   CAknAppUi* appui = (CAknAppUi*)env->AppUi();
   TVwsViewId view_id;
@@ -535,21 +555,21 @@ void ControlWalker::Walk(LoggingState* logger) {
     }
   }
   logger->Log(header);
+  logger->IncreaseIndent();
 
   CCoeControl* top = appui->TopFocusedControl();
   if (1) {
     // TopFocusedControl() returns NULL in the menu on-device, so it's
     // not good enough.
     logger->Log(_L("From TopFocusedControl"));
-    WalkOne(top, logger);
+    WalkOne(top, logger, 0);
   }
 
   WalkStack(logger);
 
   if (1) {
-    // Walk all siblings of a known control. This doesn't work on-device
-    // for the menu either and is very expensive as the RWindow calls flush
-    // the window server command queue.
+    // Walk all siblings of a known control. This is very expensive as
+    // the RWindow calls flush the window server command queue.
     CCoeControl* from_control = cba;
     if (!from_control) from_control = title_pane;
     while (from_control) {
@@ -581,4 +601,6 @@ void ControlWalker::Walk(LoggingState* logger) {
     logger->Log(_L("From topmost window"));
     WalkWindows((TUint32)top, logger, ETrue);
   }
+
+  logger->DecreaseIndent();
 }
