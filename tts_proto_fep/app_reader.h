@@ -46,7 +46,7 @@ class AppState : public CBase {
     (*field)->Des() = text;
   }
   void ResetText(HBufC* field) {
-    if (field) return;
+    if (!field) return;
     field->Des().Zero();
   }
   TUid app_uid_;

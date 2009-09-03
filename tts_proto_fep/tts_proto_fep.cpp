@@ -8,10 +8,14 @@
 #include <fepbase.h>
 #include <implementationproxy.h>
 
+#include "app_reader.h"
+#include "app_readers/menu.h"
 #include "control_walker.h"
 #include "fep_proxy.h"
 #include "logging_window_gc.h"
 #include "reporting.h"
+
+static const TBool kDevelopmentMode = EFalse;
 
 // TODO(mikie): move the Triggerer classes to their own file and generalize
 // their action.
@@ -118,6 +122,7 @@ TtsProtoFepPlugin::~TtsProtoFepPlugin() {
   delete key_triggerer_;
   delete walker_;
   delete async_trigger_;
+  delete app_reader_;
 }
 
 CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
@@ -130,6 +135,16 @@ CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
   key_triggerer_ = new (ELeave) KeyPressWalkTriggerer(async_trigger_,
                                                       LoggingState::Get());
   key_triggerer_->ConstructL();
+  
+  RProcess me;
+  me.Open(me.Id());
+  if (!app_reader_) {
+    app_reader_ = new (ELeave) MenuReader;
+    if (app_reader_->ForApplication() != me.SecureId()) {
+      delete app_reader_;
+      app_reader_ = NULL;
+    }
+  }
 #if 0
   const TUid aknfepuid = { 0x101fd65a };
   akn_plugin_ = CCoeFepPlugIn::NewL(aknfepuid);
@@ -168,8 +183,42 @@ void TtsProtoFepPlugin::ConstructL() {
   delete temp_logging_gc;
 }
 
+namespace {
+void ReportAppState(LoggingState* logger, const AppState& app) {
+  TBuf<128> buf;
+  buf.Append(app.Title().Left(80));
+  buf.Append(_L(" uid: "));
+  buf.AppendNum(app.AppUid().iUid, EHex);
+  buf.Append(_L(" view: "));
+  buf.AppendNum(app.ViewUid().iUid, EHex);
+  logger->Log(buf);
+  buf.Zero();
+  buf.Append(_L("item "));
+  buf.AppendNum(app.SelectedItemIndex());
+  buf.Append(_L(" of "));
+  buf.AppendNum(app.ItemCount());
+  buf.Append(_L(": "));
+  buf.Append(app.SelectedItemText().Left(80));
+  logger->Log(buf);
+  buf.Zero();
+  buf.Append(_L("softkeys "));
+  buf.Append(app.FirstSoftkey());
+  buf.Append(_L(" "));
+  buf.Append(app.SecondSoftkey());
+  logger->Log(buf);
+}
+}  // namespace
+
 void TtsProtoFepPlugin::OnTrigger() {
-  walker_->Walk(LoggingState::Get());
+  if (kDevelopmentMode) {
+    // development mode
+    walker_->Walk(LoggingState::Get());
+  } else {
+    if (app_reader_) {
+      app_reader_->Read();
+      ReportAppState(LoggingState::Get(), app_reader_->State());
+    }
+  }
 }
                        
 //

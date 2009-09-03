@@ -10,6 +10,7 @@
 // way to get the new one is to reboot the phone and only install with FepSetup
 // after that.
 
+class AppReaderInterface;
 class AsyncTrigger;
 class ControlWalker;
 class CWindowGc;
@@ -43,6 +44,7 @@ class TtsProtoFepPlugin: public CCoeFepPlugIn, public TriggerInterface {
   ControlWalker* walker_;
   ForegroundWalkTriggerer* triggerer_;
   KeyPressWalkTriggerer* key_triggerer_;
+  AppReaderInterface* app_reader_;
 };
 
 #endif  // MYFEPPLUGIN_H_
