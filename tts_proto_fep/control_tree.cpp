@@ -81,7 +81,7 @@ CEikMenuBar* ControlTree::MenuBar() {
   CEikMenuBar* menu = NULL;
   CAknView* view = View();
   if (view) {
-    // I have no idea view view->MenuBar() doesn't give us the menu.
+    // I have no idea why view->MenuBar() doesn't give us the menu.
     menu = view->iMenu;
   }
   if (!menu) menu = eikon_env_->AppUiFactory()->MenuBar();
