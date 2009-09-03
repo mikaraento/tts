@@ -1,8 +1,12 @@
 #include "app_readers/menu.h"
 
+// There's lots of generic state reading (softkeys, menu) here right now -
+// it'll get factored out to be used by the ContactsReader too.
+
 #include <aknappui.h>
 #include <akngrid.h>
 #include <akntitle.h>
+#include <aknview.h>
 #include <eikenv.h>
 #include <eiklbx.h>
 
@@ -14,13 +18,29 @@ const TUid& MenuReader::ForApplication() const {
   return kMenuUid;
 }
 
+// Although CEikMenuPane declares an IMPORT_C CascadeMenuPane() function
+// it's not actually in the LIBs.
+class CEikMenuPaneExtension {
+ public:
+  static inline CEikMenuPane* CascadeMenuPane(CEikMenuPane* pane) {
+    return pane->iCascadeMenuPane;
+  }
+};
+
 void MenuReader::GetMainView() {
   if (main_view_) return;
-  const TRect client_rect = control_tree_.AppUi()->ClientRect();
-  TSize client_size = client_rect.Size();
-  CCoeControl* cba = control_tree_.Cba();
-  if (cba) {
-    client_size.iHeight -= cba->Size().iHeight;
+  TRect client_rect;
+  TSize client_size;
+  if (control_tree_.View()) {
+    client_rect = control_tree_.View()->ClientRect();
+    client_size = client_rect.Size();
+  } else {
+    client_rect = control_tree_.AppUi()->ClientRect();
+    client_size = client_rect.Size();
+    CCoeControl* cba = control_tree_.Cba();
+    if (cba) {
+      client_size.iHeight -= cba->Size().iHeight;
+    }
   }
   control_tree_.RefreshWindowList();
   const ControlTree::ControlArray& controls = control_tree_.WindowList();
@@ -72,6 +92,24 @@ void MenuReader::Read() {
     app_state_.SetIsShowingMenuOrPopup(ETrue);
     return;
   }
+  CEikMenuBar* menu = control_tree_.MenuBar();
+  if (menu && menu->IsDisplayed()) {
+    app_state_.SetIsShowingMenuOrPopup(ETrue);
+    CEikMenuPane* pane = menu->MenuPane();
+    if (pane) {
+      CEikMenuPane* cascade = pane;
+      while (cascade) {
+        pane = cascade;
+        cascade = CEikMenuPaneExtension::CascadeMenuPane(pane);
+      }
+      app_state_.SetItemCount(pane->NumberOfItemsInPane());
+      app_state_.SetSelectedItemIndex(pane->SelectedItem());
+      const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
+          pane->SelectedItem());
+      app_state_.SetSelectedItemText(data.iText);
+    }
+    return;
+  }
   
   if (view_id.iViewUid.iUid != 1) {
     // Don't recognize this view, bail out.
@@ -82,6 +120,9 @@ void MenuReader::Read() {
   GetMainView();
   if (main_view_) {
     if (main_view_->CountComponentControls() > 0) {
+      // This shows the brittleness of the code: the control layout is
+      // different on the (3.0 MR) emulator than on the device. May need
+      // tuning for different firmware versions of the same device too.
 #ifdef __WINS__
       CCoeControl* container = main_view_;
 #else

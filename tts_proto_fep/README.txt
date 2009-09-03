@@ -26,6 +26,15 @@ various UI objects. For this purpose some headers have been copied to
 modified_system_include and all the protected and private fields declared as
 public.
 
+Note that this approach may not cover all cases. The tooltips on the phone
+desktop may be difficult to find. For that we may need to combine the CWindowGc
+override.
+
+Note that although installing a new version of the FEP may succeed you may
+still actually get the old one if it's not been fully unloaded. The sure
+way to get the new one is to reboot the phone and only install with FepSetup
+after that.
+
 The code follows mostly Google C++ Coding Style
 (http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml) with some
 Symbianisms.
