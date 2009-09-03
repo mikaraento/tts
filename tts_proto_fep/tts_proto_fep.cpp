@@ -15,14 +15,14 @@
 
 // TODO(mikie): move the Triggerer classes to their own file and generalize
 // their action.
-class ForegroundWalkTriggerer : public MCoeForegroundObserver {
+class ForegroundWalkTriggerer : public CBase, public MCoeForegroundObserver {
  public:
   ForegroundWalkTriggerer(ControlWalker* walk, LoggingState* logger) {
     walk_ = walk;
     logger_ = logger;
     CEikonEnv::Static()->AddForegroundObserverL(*this);
   }
-  ~ForegroundWalkTriggerer() {
+  virtual ~ForegroundWalkTriggerer() {
     CEikonEnv::Static()->RemoveForegroundObserver(*this);
   }
  private:
@@ -36,7 +36,7 @@ class ForegroundWalkTriggerer : public MCoeForegroundObserver {
 
 class KeyPressWalkTriggerer : public CCoeControl {
  public:
-   KeyPressWalkTriggerer(ControlWalker* walk, LoggingState* logger) {
+  KeyPressWalkTriggerer(ControlWalker* walk, LoggingState* logger) {
     walk_ = walk;
     logger_ = logger;
   }
@@ -56,14 +56,15 @@ class KeyPressWalkTriggerer : public CCoeControl {
     ((CCoeAppUi*)iEikonEnv->AppUi())->AddToStackL(this,
         ECoeStackPriorityFep, ECoeStackFlagSharable|ECoeStackFlagRefusesFocus);
   }
-  ~KeyPressWalkTriggerer() {
+  virtual ~KeyPressWalkTriggerer() {
     ((CCoeAppUi*)iEikonEnv->AppUi())->RemoveFromStack(this);
   }
-  TKeyResponse OfferKeyEventL(const TKeyEvent& /* aKeyEvent */,
+  virtual TKeyResponse OfferKeyEventL(const TKeyEvent& /* aKeyEvent */,
                               TEventCode /* aEventCode */) {
     walk_->TriggerWalk(logger_);
     return EKeyWasNotConsumed;
   }
+
  private:
   ControlWalker* walk_;
   LoggingState* logger_;
@@ -142,7 +143,7 @@ CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
 void TtsProtoFepPlugin::SynchronouslyExecuteSettingsDialogL(
     CCoeEnv& aConeEnvironment) {
   if (fep_proxy_) {
-    fep_proxy_->SynchronouslyExecuteSettingsDialogL(aConeEnvironment);    
+    fep_proxy_->SynchronouslyExecuteSettingsDialogL(aConeEnvironment);
   } else if (akn_plugin_) {
     akn_plugin_->SynchronouslyExecuteSettingsDialogL(aConeEnvironment);
   }
@@ -153,9 +154,9 @@ TtsProtoFepPlugin::TtsProtoFepPlugin() {
 
 void TtsProtoFepPlugin::ConstructL() {
   LoggingState::SetupTls();
-  
+
   return;
-  
+
   CCoeEnv* env = CCoeEnv::Static();
   LoggingWindowGc* temp_logging_gc = new (ELeave) LoggingWindowGc(env->ScreenDevice());
   original_gc_ = env->SwapSystemGc(temp_logging_gc);
@@ -165,7 +166,7 @@ void TtsProtoFepPlugin::ConstructL() {
   delete temp_logging_gc;
 }
 
-// 
+//
 const TImplementationProxy kImplementationTable[] = {
         IMPLEMENTATION_PROXY_ENTRY(0x20006E90, TtsProtoFepPlugin::NewL) };
 

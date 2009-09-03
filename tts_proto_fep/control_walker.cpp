@@ -13,9 +13,9 @@
 #include "modifed_system_include/coeaui.h"
 #include "modifed_system_include/eiklbx.h"
 
-#include <aknform.h> 
+#include <aknform.h>
 #include <aknlistquerycontrol.h>
-#include <aknlists.h> 
+#include <aknlists.h>
 #include <aknquerydialog.h>
 #include <aknselectionlist.h>
 #include <aknsfld.h>
@@ -28,7 +28,7 @@
 #include <eikenv.h>
 #include <eiklabel.h>
 #include <eikspane.h>
-#include <frmtview.h> 
+#include <frmtview.h>
 
 #include "reporting.h"
 
@@ -282,7 +282,15 @@ struct ClassSig {
   void (*ReportState)(CCoeControl* control, LoggingState* logger);
 };
 
-#ifdef __WINS__
+#if 0
+// This code was useful as a starting point but:
+//   - it doesn't work on-device
+//   - it's expensive
+//   - it's good enough to detect CEikListBox rather than the specific children
+//   - it's not enough anyway as not all the classes we are interested in
+//     can be constructed without arguments
+//   - a lot of apps use derived classes so the vtable-pointer-comparison
+//     isn't enough.
 #define CONTROL(name) \
   void* Get ## name ## VTable() { \
     name * o = new (ELeave) name; \
@@ -324,7 +332,7 @@ void ReportWithSig(const ClassSig* control_class,
   TBuf<100> name;
   name.Copy(TPtrC8(control_class->class_name));
   logger->Log(name);
-  (*(control_class->ReportState))(control, logger);  
+  (*(control_class->ReportState))(control, logger);
 }
 
 void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
@@ -349,7 +357,7 @@ void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
   if (grid) {
     logger->Log(_L("CAknGrid"));
     Report(grid, logger);
-    return;    
+    return;
   }
   CEikListBox* list2 = IsEikListBox(control);
   if (list2) {
@@ -361,7 +369,7 @@ void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
   if (dialog) {
     logger->Log(_L("CAknSelectionListDialog"));
     Report(dialog, logger);
-    return;    
+    return;
   }
   CAknSearchField* searchfield = IsAknSearchField(control);
   if (searchfield) {
@@ -373,15 +381,15 @@ void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
   if (edwin) {
     logger->Log(_L("CEikEdwin"));
     Report(edwin, logger);
-    return;    
+    return;
   }
   CEikLabel* label = IsEikLabel(control);
   if (label) {
     logger->Log(_L("CEikLabel"));
     Report(label, logger);
-    return;    
+    return;
   }
-#if 0 
+#if 0
   // HACKHACK. This code was used to verify that a certain control indeed
   // is the grid in the app menu.
   if (depth == 2 &&
@@ -389,7 +397,7 @@ void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
       control->Size().iHeight == 264) {
     logger->Log(_L("CAknGrid"));
     Report((CAknGrid*)control, logger);
-    return;    
+    return;
   }
 #endif
 
@@ -510,7 +518,7 @@ void ControlWalker::RunL() {
 
 void ControlWalker::Walk(LoggingState* logger) {
   CEikonEnv* env = CEikonEnv::Static();
-  
+
   TBuf<100> header;
   CEikStatusPane* sp = env->AppUiFactory()->StatusPane();
   CAknTitlePane* title_pane = NULL;
@@ -581,10 +589,10 @@ void ControlWalker::Walk(LoggingState* logger) {
         WalkWindows((TUint32)from_control, logger, EFalse);
         break;
       }
-      from_control = from_control->Parent(); 
+      from_control = from_control->Parent();
     }
   }
-  
+
   if (0) {
     // This walks controls by starting from the first child window of the
     // application window group. However, the handle of the first child

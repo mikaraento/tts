@@ -26,7 +26,7 @@ class AknFepLoader : public CActive {
     // the parameters are ignored.
     //CCoeFepParameters* params = CCoeFepParameters::NewLC();
     CCoeFepParameters* params = NULL;
-    akn_fep_ = akn_plugin_->NewFepL(*env, *params); 
+    akn_fep_ = akn_plugin_->NewFepL(*env, *params);
     //CleanupStack::PopAndDestroy(params);
   }
   CCoeFep* fep() { return akn_fep_; }

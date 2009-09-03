@@ -5,6 +5,7 @@ process that owns the controls. Hence a FEP is used - FEPs are loaded into all
 processes (threads) that use CONE (CCoeEnv).
 
 In production mode the goals for this code are:
+   - reproduce the normal AKNFEP behaviour
    - recognize the current application view
    - retrieve known currently visible controls (lists, text fields)
    - retrieve the interesting content/state of the known controls
@@ -24,3 +25,7 @@ Accessing the control tree requires digging around the internal state of the
 various UI objects. For this purpose some headers have been copied to
 modified_system_include and all the protected and private fields declared as
 public.
+
+The code follows mostly Google C++ Coding Style
+(http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml) with some
+Symbianisms.
