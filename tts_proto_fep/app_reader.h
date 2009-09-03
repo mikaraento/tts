@@ -22,6 +22,7 @@ class AppState : public CBase {
   const TDesC& SelectedItemText() const { return ReturnText(item_text_); }
   const TInt SelectedItemIndex() const { return item_index_; }
   const TInt ItemCount() const { return item_count_; }
+  const TDesC& Debug() const { return ReturnText(debug_); }
 
   void Reset();
   void SetAppUid(const TUid& v) { app_uid_ = v; }
@@ -34,6 +35,7 @@ class AppState : public CBase {
   void SetSelectedItemText(const TDesC& v) { SetText(&item_text_, v); }
   void SetSelectedItemIndex(const TInt v) { item_index_ = v; }
   void SetItemCount(const TInt v) { item_count_ = v; }
+  void SetDebug(const TDesC& v) { SetText(&debug_, v); }
 
  private:
   const TDesC& ReturnText(HBufC* field) const {
@@ -59,6 +61,7 @@ class AppState : public CBase {
   HBufC* item_text_;
   TInt item_index_;
   TInt item_count_;
+  HBufC* debug_;
 };
 
 class AppReaderInterface {

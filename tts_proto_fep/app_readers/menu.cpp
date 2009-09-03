@@ -87,31 +87,42 @@ void MenuReader::Read() {
     }
   }
 
-  if (control_tree_.AppUi()->IsDisplayingMenuOrDialog()) {
-    // Bleh - this doesn't seem to work.
-    app_state_.SetIsShowingMenuOrPopup(ETrue);
-    return;
-  }
+  TBuf<100> debug;
   CEikMenuBar* menu = control_tree_.MenuBar();
-  if (menu && menu->IsDisplayed()) {
-    app_state_.SetIsShowingMenuOrPopup(ETrue);
+  debug.Append(_L("menu = "));
+  debug.AppendNum((TUint32)menu, EHex);
+  if (menu) {
+    debug.Append(_L(" isfocused = "));
+    debug.AppendNum((TInt32)menu->IsFocused());
+    debug.Append(_L(" is_visible = "));
+    debug.AppendNum((TInt32)menu->IsVisible());
+    debug.Append(_L(" is_displayed = "));
+    debug.AppendNum((TInt32)menu->IsDisplayed());
+  }
+  app_state_.SetDebug(debug);
+  if (menu && menu->IsFocused()) {
     CEikMenuPane* pane = menu->MenuPane();
     if (pane) {
-      CEikMenuPane* cascade = pane;
-      while (cascade) {
-        pane = cascade;
-        cascade = CEikMenuPaneExtension::CascadeMenuPane(pane);
+      app_state_.SetIsShowingMenuOrPopup(ETrue);
+      if (pane) {
+        CEikMenuPane* cascade = pane;
+        while (cascade) {
+          pane = cascade;
+          cascade = CEikMenuPaneExtension::CascadeMenuPane(pane);
+        }
+        app_state_.SetItemCount(pane->NumberOfItemsInPane());
+        if (pane->NumberOfItemsInPane() > 0) {
+          app_state_.SetSelectedItemIndex(pane->SelectedItem());
+          const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
+              pane->SelectedItem());
+          app_state_.SetSelectedItemText(data.iText);
+        }
       }
-      app_state_.SetItemCount(pane->NumberOfItemsInPane());
-      app_state_.SetSelectedItemIndex(pane->SelectedItem());
-      const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
-          pane->SelectedItem());
-      app_state_.SetSelectedItemText(data.iText);
+      return;
     }
-    return;
   }
   
-  if (view_id.iViewUid.iUid != 1) {
+  if (view_id.iViewUid.iUid != 1 || view_id.iAppUid != ForApplication()) {
     // Don't recognize this view, bail out.
     return;
   }

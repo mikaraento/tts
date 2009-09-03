@@ -111,6 +111,23 @@ void Report(CAknGrid* grid, LoggingState* logger) {
   }
 }
 
+void Report(CEikMenuPane* pane, LoggingState* logger) {
+  if (!pane) return;
+  if (pane->NumberOfItemsInPane() > 0) {
+    TBuf<80> buf = _L("Item ");
+    buf.AppendNum(pane->SelectedItem() + 1);
+    buf.Append(_L(" of "));
+    buf.AppendNum(pane->NumberOfItemsInPane());
+    buf.Append(_L(": "));
+    const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
+        pane->SelectedItem());
+    buf.Append(data.iText.Left(50));
+    logger->Log(buf);
+  } else {
+    logger->Log(_L("empty"));
+  }
+}
+
 void Report(CAknSearchField* field, LoggingState* logger) {
   HBufC* text = HBufC::NewLC(field->TextLength());
   TPtr16 textp = text->Des();
@@ -273,6 +290,22 @@ CEikLabel* IsEikLabel(CCoeControl* control) {
   return NULL;
 }
 
+class EikMenuObserver : public MEikMenuObserver {
+  virtual void SetEmphasis(CCoeControl* aMenuControl,TBool aEmphasis) {}
+  virtual void ProcessCommandL(TInt aCommandId) {}
+};
+
+CEikMenuPane* IsEikMenuPane(CCoeControl* control) {
+  EikMenuObserver obs;
+  CEikMenuPane* created = new CEikMenuPane(&obs);
+  if (*(void**)created == *(void**)control) {
+    delete created;
+    return (CEikMenuPane*)control;
+  }
+  delete created;
+  return NULL;
+}
+
 // We want to be able detect known control class instances with the minimum
 // fuss, so we we write the necessary reporting functions and generate a lookup
 // table.
@@ -388,6 +421,12 @@ void InspectControl(CCoeControl* control, LoggingState* logger, int depth) {
   if (label) {
     logger->Log(_L("CEikLabel"));
     Report(label, logger);
+    return;
+  }
+  CEikMenuPane* menubar = IsEikMenuPane(control);
+  if (menubar) {
+    logger->Log(_L("CEikMenuPane"));
+    Report(menubar, logger);
     return;
   }
 #if 0
