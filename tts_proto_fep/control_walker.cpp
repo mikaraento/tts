@@ -528,19 +528,10 @@ void ControlWalker::Walk(LoggingState* logger) {
   CEikonEnv* env = CEikonEnv::Static();
 
   TBuf<100> header;
-#if 0
-  CEikStatusPane* sp = env->AppUiFactory()->StatusPane();
-  CAknTitlePane* title_pane = NULL;
-  if (sp) {
-    title_pane = (CAknTitlePane*)
-        sp->ControlL(TUid::Uid(EEikStatusPaneUidTitle));
-  }
-#else
   ControlTree control_tree;
   control_tree.RefreshControlStack();
   control_tree.RefreshWindowList();
   CAknTitlePane* title_pane = control_tree.TitlePane();
-#endif
   if (title_pane) {
     header.Append(title_pane->Text()->Left(50));
   }
@@ -565,11 +556,7 @@ void ControlWalker::Walk(LoggingState* logger) {
   CAknAppUi* appui = (CAknAppUi*)env->AppUi();
   TVwsViewId view_id;
   TInt view_found = appui->GetActiveViewId(view_id);
-#if 0
-  CCoeControl* cba = env->AppUiFactory()->Cba();
-#else
   CCoeControl* cba = control_tree.Cba();
-#endif
   if (view_found != KErrNotFound) {
     header.Append(_L(" view: "));
     header.AppendNum(view_id.iAppUid.iUid, EHex);
@@ -584,11 +571,7 @@ void ControlWalker::Walk(LoggingState* logger) {
   logger->Log(header);
   logger->IncreaseIndent();
 
-#if 0
-  CCoeControl* top = appui->TopFocusedControl();
-#else
   CCoeControl* top = control_tree.TopFocusedControl();
-#endif
   if (1) {
     // TopFocusedControl() returns NULL in the menu on-device, so it's
     // not good enough.
@@ -603,23 +586,7 @@ void ControlWalker::Walk(LoggingState* logger) {
     WalkArray(control_tree.ControlStack(), logger);
   }
 
-  if (0) {
-    // Walk all siblings of a known control. This is very expensive as
-    // the RWindow calls flush the window server command queue.
-    CCoeControl* from_control = cba;
-    if (!from_control) from_control = title_pane;
-    while (from_control) {
-      RWindow* window = CCoeRedrawer::Window(from_control);
-      if (window) {
-        logger->Log(_L("Windows from cba - forward"));
-        WalkWindows((TUint32)from_control, logger, ETrue);
-        logger->Log(_L("Windows from cba - back"));
-        WalkWindows((TUint32)from_control, logger, EFalse);
-        break;
-      }
-      from_control = from_control->Parent();
-    }
-  } else {
+  if (1) {
     logger->Log(_L("From Windows"));
     WalkArray(control_tree.WindowList(), logger);
   }
