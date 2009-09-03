@@ -3,6 +3,11 @@
 // There's lots of generic state reading (softkeys, menu) here right now -
 // it'll get factored out to be used by the ContactsReader too.
 
+// The Menu app is odd. The main container cannot be found through the
+// TopFocusedControl nor the control stack. The menus don't come through
+// the AppUi's or current view's MenuBar().
+// I might be missing something here :-(
+
 #include <aknappui.h>
 #include <akngrid.h>
 #include <akntitle.h>
@@ -24,6 +29,9 @@ class CEikMenuPaneExtension {
  public:
   static inline CEikMenuPane* CascadeMenuPane(CEikMenuPane* pane) {
     return pane->iCascadeMenuPane;
+  }
+  static inline CEikMenuPane* Owner(CEikMenuPane* pane) {
+    return pane->iOwner;
   }
 };
 
@@ -54,6 +62,33 @@ void MenuReader::GetMainView() {
   }
 }
 
+void MenuReader::ReadMenuState(CEikMenuPane* pane) {
+  if (pane) {
+    CEikMenuPane* owner = pane;
+    pane = NULL;
+    while (owner && owner != pane) {
+      pane = owner;
+      owner = CEikMenuPaneExtension::Owner(pane);
+    }
+    latest_menu_pane_ = pane;
+    CCoeControl* parent = pane->Parent();
+    CEikMenuBar* bar = (CEikMenuBar*)parent;
+    app_state_.SetIsShowingMenuOrPopup(ETrue);
+    CEikMenuPane* cascade = pane;
+    while (cascade) {
+      pane = cascade;
+      cascade = CEikMenuPaneExtension::CascadeMenuPane(pane);
+    }
+    app_state_.SetItemCount(pane->NumberOfItemsInPane());
+    if (pane->NumberOfItemsInPane() > 0) {
+      app_state_.SetSelectedItemIndex(pane->SelectedItem());
+      const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
+          pane->SelectedItem());
+      app_state_.SetSelectedItemText(data.iText);
+    }
+  }
+}
+
 void MenuReader::Read() {
   app_state_.Reset();
   CAknTitlePane* title = control_tree_.TitlePane();
@@ -69,56 +104,52 @@ void MenuReader::Read() {
   // From
   // http://wiki.forum.nokia.com/index.php/TSS000675_-_Retrieving_text_for_softkey_labels
   CEikButtonGroupContainer* cba = control_tree_.Cba();
+  TInt first_command;
+  TInt second_command;
   if (cba) {
     MEikButtonGroup* buttonGroup = cba->ButtonGroup();
     for (int pos = 0; pos < 3; ++pos) {
-      const TInt cmdId = buttonGroup->CommandId(pos);
-      CCoeControl* button = buttonGroup->GroupControlById(cmdId);
-      if (button && buttonGroup->IsCommandVisible(cmdId)) {
+      const TInt cmd_id = buttonGroup->CommandId(pos);
+      CCoeControl* button = buttonGroup->GroupControlById(cmd_id);
+      if (button && buttonGroup->IsCommandVisible(cmd_id)) {
         CEikLabel* label =
                 static_cast<CEikLabel*> (button->ComponentControl(0));
         const TDesC* txt = label->Text();
         if (pos == 0) {
           app_state_.SetFirstSoftkey(*txt);
+          first_command = cmd_id;
         } else {
-          app_state_.SetSecondSoftkey(*txt);          
+          app_state_.SetSecondSoftkey(*txt);
+          second_command = cmd_id;
         }
       }
     }
   }
 
-  TBuf<100> debug;
-  CEikMenuBar* menu = control_tree_.MenuBar();
-  debug.Append(_L("menu = "));
-  debug.AppendNum((TUint32)menu, EHex);
-  if (menu) {
-    debug.Append(_L(" isfocused = "));
-    debug.AppendNum((TInt32)menu->IsFocused());
-    debug.Append(_L(" is_visible = "));
-    debug.AppendNum((TInt32)menu->IsVisible());
-    debug.Append(_L(" is_displayed = "));
-    debug.AppendNum((TInt32)menu->IsDisplayed());
-  }
-  app_state_.SetDebug(debug);
-  if (menu && menu->IsFocused()) {
-    CEikMenuPane* pane = menu->MenuPane();
-    if (pane) {
-      app_state_.SetIsShowingMenuOrPopup(ETrue);
+#ifndef __WINS__
+  // Can't find the menu this way in the Menu app on-device.
+  if (view_id.iViewUid.iUid != 1 || view_id.iAppUid != ForApplication())
+#endif  // !__WINS__
+  {
+    TBuf<100> debug;
+    CEikMenuBar* menu = control_tree_.MenuBar();
+    debug.Append(_L("menu = "));
+    debug.AppendNum((TUint32)menu, EHex);
+    if (menu) {
+      debug.Append(_L(" isfocused = "));
+      debug.AppendNum((TInt32)menu->IsFocused());
+      debug.Append(_L(" is_visible = "));
+      debug.AppendNum((TInt32)menu->IsVisible());
+      debug.Append(_L(" is_displayed = "));
+      debug.AppendNum((TInt32)menu->IsDisplayed());
+    }
+    app_state_.SetDebug(debug);
+    if (menu && menu->IsFocused()) {
+      CEikMenuPane* pane = menu->MenuPane();
+      ReadMenuState(pane);
       if (pane) {
-        CEikMenuPane* cascade = pane;
-        while (cascade) {
-          pane = cascade;
-          cascade = CEikMenuPaneExtension::CascadeMenuPane(pane);
-        }
-        app_state_.SetItemCount(pane->NumberOfItemsInPane());
-        if (pane->NumberOfItemsInPane() > 0) {
-          app_state_.SetSelectedItemIndex(pane->SelectedItem());
-          const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
-              pane->SelectedItem());
-          app_state_.SetSelectedItemText(data.iText);
-        }
+        return;
       }
-      return;
     }
   }
   
@@ -126,6 +157,32 @@ void MenuReader::Read() {
     // Don't recognize this view, bail out.
     return;
   }
+  
+#ifndef __WINS__
+  if (first_command == EAknSoftkeySelect &&
+      second_command == EAknSoftkeyCancel) {
+    // We are probably showing a menu. Let's root around the windows
+    // to find it.
+    if (!latest_menu_pane_) {
+      // This optimization may not be safe. Let's look and see.
+      control_tree_.RefreshWindowList();
+      const ControlTree::ControlArray& list = control_tree_.WindowList();
+      for (int i = 0; i < list.Count(); ++i) {
+        CCoeControl* control = list[i];
+        CEikMenuPane* pane = safe_.IsEikMenuPane(control);
+        if (pane) {
+          ReadMenuState(pane);
+          break;
+        }
+      }
+    } else {
+      ReadMenuState(latest_menu_pane_);
+    }
+    return;
+  } else {
+    latest_menu_pane_ = NULL;
+  }
+#endif  // !__WINS__
 
   CEikListBox* listbox = NULL;
   GetMainView();

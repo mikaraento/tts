@@ -3,6 +3,9 @@
 
 #include "app_reader.h"
 #include "control_tree.h"
+#include "rtti.h"
+
+class CEikMenuPane;
 
 // Reads the main menu.
 class MenuReader : public CBase, public AppReaderInterface {
@@ -12,12 +15,17 @@ class MenuReader : public CBase, public AppReaderInterface {
   virtual const TUid& ForApplication() const;
   virtual void Read();
   virtual const AppState& State() const { return app_state_; }
+
  private:
   void GetMainView();
+  void ReadMenuState(CEikMenuPane* pane);
   // Owned
   AppState app_state_;
   ControlTree control_tree_;
   // Not owned.
   CCoeControl* main_view_;
+  CEikMenuPane* latest_menu_pane_;
+  SafeTypes safe_;
 };
+
 #endif  // APP_READERS_MENU_H_

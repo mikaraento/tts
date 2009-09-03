@@ -23,10 +23,13 @@ bool IsValidPointer(void* p);
 // controls. It typically does this by comparing vtable pointers.
 class SafeTypes : public CBase{
  public:
+  SafeTypes();
   CAknSearchField* IsAknSearchField(CCoeControl* control);
   CEikEdwin* IsEikEdwin(CCoeControl* control);
   CEikLabel* IsEikLabel(CCoeControl* control);
   CEikMenuPane* IsEikMenuPane(CCoeControl* control);
+ private:
+  void* menu_pane_vtable_;
 };
 
 // UnsafeTypes uses heuristics to make a good guess about the type of the

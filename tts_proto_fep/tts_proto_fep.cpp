@@ -141,11 +141,11 @@ CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
   if (!app_reader_) {
     app_reader_ = new (ELeave) MenuReader;
     const TUint32 fepsetup_uid = 0xe0003473;
-    /*if (app_reader_->ForApplication() != me.SecureId() &&
+    if (app_reader_->ForApplication() != me.SecureId() &&
         fepsetup_uid != me.SecureId()) {
       delete app_reader_;
       app_reader_ = NULL;
-    }*/
+    }
   }
 #if 0
   const TUid aknfepuid = { 0x101fd65a };
@@ -213,15 +213,15 @@ void ReportAppState(LoggingState* logger, const AppState& app) {
 }  // namespace
 
 void TtsProtoFepPlugin::OnTrigger() {
-  //if (kDevelopmentMode) {
+  if (kDevelopmentMode) {
     // development mode
     walker_->Walk(LoggingState::Get());
-  //} else {
+  } else {
     if (app_reader_) {
       app_reader_->Read();
       ReportAppState(LoggingState::Get(), app_reader_->State());
     }
-  //}
+  }
 }
                        
 //

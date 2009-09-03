@@ -114,6 +114,8 @@ CAknSelectionListDialog* IsAknSelectionListDialog(CCoeControl* control) {
 }
 */
 
+SafeTypes::SafeTypes() : menu_pane_vtable_(NULL) {}
+
 namespace {
 class EmptyControl : public CCoeControl {
  public:
@@ -158,18 +160,26 @@ CEikLabel* SafeTypes::IsEikLabel(CCoeControl* control) {
 
 namespace {
 class EikMenuObserver : public MEikMenuObserver {
-  virtual void SetEmphasis(CCoeControl* aMenuControl,TBool aEmphasis) {}
-  virtual void ProcessCommandL(TInt aCommandId) {}
+  virtual void SetEmphasis(CCoeControl* /* aMenuControl */,
+                           TBool /* aEmphasis */) {}
+  virtual void ProcessCommandL(TInt /* aCommandId */) {}
 };
 }  // namespace
 
+// Note that we can't use this technique to look for an CEikMenuBar as
+// creating one crashes with KERN-EXEC 3 on several FP1 phones (including
+// N95s and N82s). See
+// http://wiki.forum.nokia.com/index.php/Constructing_CEikMenuBar_crashes_on_some_FP1_models
+
 CEikMenuPane* SafeTypes::IsEikMenuPane(CCoeControl* control) {
-  EikMenuObserver obs;
-  CEikMenuPane* created = new CEikMenuPane(&obs);
-  if (*(void**)created == *(void**)control) {
+  if (!menu_pane_vtable_) {
+    EikMenuObserver obs;
+    CEikMenuPane* created = new CEikMenuPane(&obs);
+    menu_pane_vtable_ = *(void**)created;
     delete created;
+  }
+  if (menu_pane_vtable_ == *(void**)control) {
     return (CEikMenuPane*)control;
   }
-  delete created;
   return NULL;
 }
