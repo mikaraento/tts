@@ -120,6 +120,23 @@ void MenuReader::Read() {
   }
   
 #ifndef __WINS__
+  TInt first_command = 0;
+  TInt second_command = 0;
+  if (cba) {
+    MEikButtonGroup* buttonGroup = cba->ButtonGroup();
+    for (int pos = 0; pos < 3; ++pos) {
+      const TInt cmd_id = buttonGroup->CommandId(pos);
+      CCoeControl* button = buttonGroup->GroupControlById(cmd_id);
+      if (button && buttonGroup->IsCommandVisible(cmd_id)) {
+        if (pos == 0) {
+          first_command = cmd_id;
+        } else {
+          second_command = cmd_id;
+        }
+      }
+    }
+  }
+
   if (first_command == EAknSoftkeySelect &&
       second_command == EAknSoftkeyCancel) {
     // We are probably showing a menu. Let's root around the windows

@@ -59,8 +59,6 @@ CEikButtonGroupContainer* AppHelper::ReadCba(ControlTree* control_tree,
   // From
   // http://wiki.forum.nokia.com/index.php/TSS000675_-_Retrieving_text_for_softkey_labels
   CEikButtonGroupContainer* cba = control_tree->Cba();
-  TInt first_command;
-  TInt second_command;
   if (cba) {
     MEikButtonGroup* buttonGroup = cba->ButtonGroup();
     for (int pos = 0; pos < 3; ++pos) {
@@ -72,10 +70,8 @@ CEikButtonGroupContainer* AppHelper::ReadCba(ControlTree* control_tree,
         const TDesC* txt = label->Text();
         if (pos == 0) {
           app_state->SetFirstSoftkey(*txt);
-          first_command = cmd_id;
         } else {
           app_state->SetSecondSoftkey(*txt);
-          second_command = cmd_id;
         }
       }
     }
