@@ -1,0 +1,57 @@
+/*
+* ============================================================================
+*  Name     : FepSetup_S60_3rd_ed.mmp
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+TARGET			FepSetup.exe
+TARGETTYPE		exe
+UID			0x100039CE 0xE0003473
+SECUREID		0xE0003473
+
+CAPABILITY WriteDeviceData
+
+START RESOURCE          ..\data\FepSetup.rss
+	HEADER
+	TARGETPATH	"\\resource\\apps"
+	LANG		SC
+END
+
+START RESOURCE          ..\data\FepSetup_loc.rss
+	HEADER
+	TARGETPATH	"\\resource\\apps"
+	LANG		SC
+END
+
+START RESOURCE          ..\data\FepSetup_reg.rss
+	TARGETPATH	"\\private\\10003a3f\\apps"
+END 
+
+LANG			SC
+
+SOURCEPATH		..\src
+SOURCE			FepSetupApp.cpp 
+SOURCE			FepSetupAppUi.cpp
+SOURCE			FepSetupDocument.cpp
+SOURCE			FepSetupContainer.cpp
+
+USERINCLUDE		. ..\inc
+
+SYSTEMINCLUDE		. \epoc32\include
+
+LIBRARY         euser.lib
+LIBRARY         apparc.lib
+LIBRARY         cone.lib
+LIBRARY         eikcore.lib
+LIBRARY         avkon.lib
+LIBRARY         bafl.lib
+LIBRARY         efsrv.lib 
+LIBRARY         fepbase.lib
+LIBRARY		eikcoctl.lib  // CEikLabel
+
+
+

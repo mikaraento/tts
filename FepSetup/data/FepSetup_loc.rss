@@ -1,0 +1,21 @@
+/*
+* ============================================================================
+*  Name     : FepSetup_loc.rss
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+#include <appinfo.rh>
+
+RESOURCE LOCALISABLE_APP_INFO r_fepsetup_localisable_app_info
+    {
+    short_caption = "FepSetup";
+    caption_and_icon = 
+    CAPTION_AND_ICON_INFO
+        {
+        caption = "FepSetup";
+	};
+    }

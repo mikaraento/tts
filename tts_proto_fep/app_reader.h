@@ -20,8 +20,11 @@ class AppState : public CBase {
   TBool IsShowingMenuOrPopup() const { return menu_or_popup_; }
   // Either list, grid or menu. Index and Count return -1 on unknown.
   const TDesC& SelectedItemText() const { return ReturnText(item_text_); }
-  const TInt SelectedItemIndex() const { return item_index_; }
-  const TInt ItemCount() const { return item_count_; }
+  TInt SelectedItemIndex() const { return item_index_; }
+  TInt ItemCount() const { return item_count_; }
+  TInt SelectedTabIndex() const { return tab_index_; }
+  const TDesC& SelectedTabText() const { return ReturnText(tab_text_); }
+  TInt TabCount() const { return tab_count_; }
   const TDesC& Debug() const { return ReturnText(debug_); }
 
   void Reset();
@@ -33,8 +36,11 @@ class AppState : public CBase {
   void SetSecondSoftkey(const TDesC& v) { SetText(&second_softkey_, v); }
   void SetIsShowingMenuOrPopup(TBool v) { menu_or_popup_ = v; }
   void SetSelectedItemText(const TDesC& v) { SetText(&item_text_, v); }
-  void SetSelectedItemIndex(const TInt v) { item_index_ = v; }
-  void SetItemCount(const TInt v) { item_count_ = v; }
+  void SetSelectedItemIndex(TInt v) { item_index_ = v; }
+  void SetItemCount(TInt v) { item_count_ = v; }
+  void SetSelectedTabText(const TDesC& v) { SetText(&tab_text_, v); }
+  void SetSelectedTabIndex(TInt v) { tab_index_ = v; }
+  void SetTabCount(TInt v) { tab_count_ = v; }
   void SetDebug(const TDesC& v) { SetText(&debug_, v); }
 
  private:
@@ -61,6 +67,9 @@ class AppState : public CBase {
   HBufC* item_text_;
   TInt item_index_;
   TInt item_count_;
+  HBufC* tab_text_;
+  TInt tab_index_;
+  TInt tab_count_;
   HBufC* debug_;
 };
 

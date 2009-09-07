@@ -1,0 +1,138 @@
+/*
+* ============================================================================
+*  Name     : FepSetup.rss
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+
+//  RESOURCE IDENTIFIER
+NAME    AWIZ // 4 letter ID
+
+//  INCLUDES
+
+#include <eikon.rh>
+#include "fepsetup.hrh"
+#include "fepsetup.loc"
+#include <avkon.rsg>
+#include <avkon.rh>
+#include <avkon.mbg>
+
+
+//  CONSTANTS  
+//#define ?constant   ?value
+
+
+//  MACROS  
+//#define ?macro
+
+
+//  RESOURCE DEFINITIONS 
+
+RESOURCE RSS_SIGNATURE { }
+
+RESOURCE TBUF { buf="FepSetup"; }
+
+RESOURCE EIK_APP_INFO
+    {
+    hotkeys=r_fepsetup_hotkeys;
+    menubar=r_fepsetup_menubar;
+    cba=R_AVKON_SOFTKEYS_OPTIONS_BACK;     
+    }
+
+//----------------------------------------------------
+//   
+//    r_fepsetup_hotkeys
+//    ?description
+//
+//----------------------------------------------------
+//
+RESOURCE HOTKEYS r_fepsetup_hotkeys
+    {
+    control=
+        {
+        HOTKEY { command=EAknCmdExit; key='e'; }
+        };
+    }
+
+//----------------------------------------------------
+//   
+//    r_fepsetup_menubar
+//    ?description
+//
+//----------------------------------------------------
+//
+RESOURCE MENU_BAR r_fepsetup_menubar
+    {
+    titles=
+        {
+        MENU_TITLE { menu_pane=r_fepsetup_menu; txt="File"; }
+        };
+    }
+
+//----------------------------------------------------
+//   
+//    r_fepsetup_menu
+//    ?description
+//
+//----------------------------------------------------
+//
+RESOURCE MENU_PANE r_fepsetup_menu
+    {
+    items=
+        {
+        MENU_ITEM { command=EAknCmdExit; txt="Exit"; },
+        MENU_ITEM { command=EFepSetupCmdAppInstallFep; txt="Install Fep"; },
+        MENU_ITEM { command=EFepSetupCmdAppUninstallFep; txt="Uninstall Fep"; }
+        };
+    }
+
+//----------------------------------------------------
+//   
+//    r_fepsetup_app_menu
+//    ?description
+//
+//----------------------------------------------------
+//
+RESOURCE MENU_PANE r_fepsetup_app_menu
+    {
+    items=
+        {
+        MENU_ITEM { command=EFepSetupCmdAppInstallFep; txt="<App spesific menu item>"; },
+        MENU_ITEM { command=EFepSetupCmdAppUninstallFep; txt="<App spesific menu item>"; },
+        MENU_ITEM { command=EAknCmdExit; txt="Exit"; }
+        };
+    }
+
+//----------------------------------------------------
+//   
+//    r_fepsetup_list_query
+//    ?description
+//
+//----------------------------------------------------
+//
+RESOURCE DIALOG r_fepsetup_list_query
+    {
+    flags = EGeneralQueryFlags;
+    buttons = R_AVKON_SOFTKEYS_OK_CANCEL;
+    items = 
+    {
+    AVKON_LIST_QUERY_DLG_LINE 
+        {
+        control = AVKON_LIST_QUERY_CONTROL
+        {
+        listtype = EAknCtSinglePopupMenuListBox;
+        listbox = AVKON_LIST_QUERY_LIST
+            {
+            };
+        heading = "";
+        };
+        }
+    };
+    }
+
+            
+// End of File

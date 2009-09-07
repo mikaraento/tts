@@ -13,6 +13,7 @@
 #include <aknselectionlist.h>
 #include <aknsfld.h>
 #include <aknsutils.h>
+#include <akntabgrp.h>
 #include <akntitle.h>
 #include <aknviewappui.h>
 #include <eikappui.h>
@@ -149,12 +150,14 @@ CEikEdwin* SafeTypes::IsEikEdwin(CCoeControl* control) {
 }
 
 CEikLabel* SafeTypes::IsEikLabel(CCoeControl* control) {
-  CEikLabel* created = new CEikLabel;
-  if (*(void**)created == *(void**)control) {
+  if (!eik_label_vtable_) {
+    CEikLabel* created = new CEikLabel;
+    eik_label_vtable_ = *(void**)created;
     delete created;
+  }
+  if (eik_label_vtable_ == *(void**)control) {
     return (CEikLabel*)control;
   }
-  delete created;
   return NULL;
 }
 

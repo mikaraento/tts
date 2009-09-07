@@ -1,0 +1,60 @@
+/*
+* ============================================================================
+*  Name     : FepSetup.mpp
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+TARGET			FepSetup.app
+TARGETTYPE		app
+UID			0x100039CE 0x00003473 
+TARGETPATH		\system\apps\FepSetup
+
+SOURCEPATH		..\src
+SOURCE			FepSetupApp.cpp 
+SOURCE			FepSetupAppUi.cpp
+SOURCE			FepSetupDocument.cpp
+SOURCE			FepSetupContainer.cpp
+
+RESOURCE		..\data\FepSetup.rss
+RESOURCE		..\data\FepSetup_caption.rss
+LANG			SC
+
+USERINCLUDE		. ..\inc
+
+SYSTEMINCLUDE   . \epoc32\include
+
+LIBRARY         euser.lib
+LIBRARY         apparc.lib
+LIBRARY         cone.lib
+LIBRARY         eikcore.lib
+LIBRARY         avkon.lib
+LIBRARY         bafl.lib
+LIBRARY         efsrv.lib 
+LIBRARY         fepbase.lib
+LIBRARY		eikcoctl.lib  // CEikLabel
+
+START WINS      
+// ?wins_specific_information
+END
+
+START MARM
+// ?marm_specific_information
+END
+
+// Other possible keywords:
+/* 
+START BITMAP ?target
+TARGETPATH   ?emulated_path_on_target_machine
+HEADER
+SOURCEPATH   ?source_path
+SOURCE       ?color_depth ?source_bitmap_list
+END
+*/
+// DEFFILE ?filename
+
+AIF FepSetup.aif ..\aif FepSetupaif.rss c8 context_pane_icon.bmp context_pane_icon_mask.bmp list_icon.bmp list_icon_mask.bmp
+

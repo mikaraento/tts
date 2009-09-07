@@ -11,6 +11,7 @@ CAPABILITY      All -TCB
 EPOCSTACKSIZE   0x5000
 
 SOURCEPATH      ..
+SOURCE          app_helper.cpp
 SOURCE          app_reader.cpp
 SOURCE          control_tree.cpp
 SOURCE          control_walker.cpp
@@ -35,6 +36,6 @@ LIBRARY         euser.lib
 LIBRARY         cone.lib
 LIBRARY         eikcore.lib
 LIBRARY         ecom.lib
-LIBRARY         fepbase.lib // for CCoeFepPlugin
-LIBRARY         ws32.lib // CWindowGc
-LIBRARY         gdi.lib flogger.lib avkon.lib eikcdlg.lib eikcoctl.lib eikctl.lib pbkview.lib aknnotify.lib aknskins.lib apparc.lib commondialogs.lib commonui.lib downloadmgruilib.lib etext.lib form.lib mgfetch.lib msgeditorutils.lib pbkeng.lib richbio.lib sendas2.lib sendui.lib spdctrl.lib uiklaf.lib viewcli.lib eikdlg.lib bafl.lib egul.lib eiksrv.lib // CGraphicsContext
+LIBRARY         fepbase.lib
+LIBRARY         ws32.lib
+LIBRARY         gdi.lib flogger.lib avkon.lib eikcdlg.lib eikcoctl.lib eikctl.lib pbkview.lib aknnotify.lib aknskins.lib apparc.lib commondialogs.lib commonui.lib downloadmgruilib.lib etext.lib form.lib mgfetch.lib msgeditorutils.lib pbkeng.lib richbio.lib sendas2.lib sendui.lib spdctrl.lib uiklaf.lib viewcli.lib eikdlg.lib bafl.lib egul.lib eiksrv.lib

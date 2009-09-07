@@ -5,8 +5,9 @@
 #include <e32cmn.h>
 
 class CAknAppUi;
-class CAknView;
+class CAknTabGroup;
 class CAknTitlePane;
+class CAknView;
 class CCoeControl;
 class CEikButtonGroupContainer;
 class CEikMenuBar;
@@ -25,6 +26,7 @@ class ControlTree : public CBase {
   CEikButtonGroupContainer* Cba();
   CAknView* View();
   CEikMenuBar* MenuBar();
+  CAknTabGroup* TabGroup();
   typedef RArray<CCoeControl*> ControlArray;
   // Return CCoeAppUi::TopFocusedControl
   CCoeControl* TopFocusedControl();

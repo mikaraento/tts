@@ -1,6 +1,7 @@
 #ifndef APP_READERS_MENU_H_
 #define APP_READERS_MENU_H_
 
+#include "app_helper.h"
 #include "app_reader.h"
 #include "control_tree.h"
 #include "rtti.h"
@@ -19,9 +20,9 @@ class MenuReader : public CBase, public AppReaderInterface {
  private:
   void GetMainView();
   void ReadMenuState(CEikMenuPane* pane);
-  // Owned
   AppState app_state_;
   ControlTree control_tree_;
+  AppHelper app_helper_;
   // Not owned.
   CCoeControl* main_view_;
   CEikMenuPane* latest_menu_pane_;

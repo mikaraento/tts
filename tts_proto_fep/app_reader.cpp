@@ -6,6 +6,7 @@ AppState::~AppState() {
   delete first_softkey_;
   delete second_softkey_;
   delete item_text_;
+  delete tab_text_;
   delete debug_;
 }
 
@@ -20,5 +21,8 @@ void AppState::Reset() {
   ResetText(item_text_);
   item_index_ = -1;
   item_count_ = -1;
+  ResetText(tab_text_);
+  tab_index_ = -1;
+  tab_count_ = -1;
   ResetText(debug_);
 }

@@ -1,0 +1,31 @@
+;=======================================================================
+;  Name     : FepSetup_S60_2nd_ed.pkg
+;  Part of  : FepSetup
+;  Created  : 06/14/2006 by Forum Nokia 
+;  Version  : 2.0
+;  Copyright: Forum Nokia
+;=======================================================================
+;
+; Installation file for FepSetup application
+;
+;Languages
+&EN
+;
+; UID is the app's UID
+;
+#{"FepSetup"},(0x00003473),2,0,0
+;
+; Required line for S60 2.0 devices.
+(0x101F7960), 0, 0, 0, {"Series60ProductID"} 
+
+"ReadMe.txt"-"",FT,TA
+
+;
+; Four files to install
+;
+"\Symbian\7.0s\Series60_v21_CW\Epoc32\release\armi\urel\FepSetup.app"         		-"!:\system\apps\FepSetup\FepSetup.app"
+"\Symbian\7.0s\Series60_v21_CW\Epoc32\Data\z\system\apps\FEPSETUP\FepSetup.rsc"         	-"!:\system\apps\FepSetup\FepSetup.rsc"
+"\Symbian\7.0s\Series60_v21_CW\Epoc32\Data\z\system\apps\FEPSETUP\FepSetup_caption.rsc" 	-"!:\system\apps\FepSetup\FepSetup_caption.rsc"
+"\Symbian\7.0s\Series60_v21_CW\Epoc32\Data\z\system\apps\FEPSETUP\FepSetup.aif"         	-"!:\system\apps\FepSetup\FepSetup.aif"
+
+

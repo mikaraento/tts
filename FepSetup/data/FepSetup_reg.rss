@@ -1,0 +1,30 @@
+/*
+* ============================================================================
+*  Name     : FepSetup_reg.rss
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+#include <appinfo.rh>
+#include <fepsetup_loc.rsg>
+
+UID2 KUidAppRegistrationResourceFile
+UID3 0xE0003473
+
+RESOURCE APP_REGISTRATION_INFO
+{
+  app_file="FepSetup";
+
+  localisable_resource_file =  "\\resource\\apps\\FepSetup_loc";
+  localisable_resource_id = R_FEPSETUP_LOCALISABLE_APP_INFO;
+
+  embeddability=KAppNotEmbeddable;
+  newfile=KAppDoesNotSupportNewFile;
+}
+
+// End of File
+
+      

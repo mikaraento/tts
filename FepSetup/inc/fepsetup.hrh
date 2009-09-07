@@ -1,0 +1,20 @@
+/*
+* ============================================================================
+*  Name     : FepSetup resource header file fepsetup.hrh
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+#ifndef FEPSETUP_HRH
+#define FEPSETUP_HRH
+
+enum TFepSetupCommandIds
+    {
+    EFepSetupCmdAppInstallFep = 1,
+    EFepSetupCmdAppUninstallFep = 2
+    };
+
+#endif      // FEPSETUP_HRH

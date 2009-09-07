@@ -1,0 +1,27 @@
+/*
+* ============================================================================
+*  Name     : fepsetup.loc
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+
+// LOCALISATION STRINGS
+
+//d:Command in options menu.
+//d:Example application spesific command.
+//l:list_single_popup_submenu_pane_1
+//
+#define qtn_appl_option_item "<App spesific menu item>"
+
+
+// example caption strings for app
+#define qtn_app_caption_string "FepSetup"
+
+#define qtn_app_short_caption_string "FepSetup"
+
+
+// End of File

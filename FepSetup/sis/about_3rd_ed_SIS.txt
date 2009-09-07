@@ -1,0 +1,2 @@
+You have to sign the FepSetup_S60_3rd_ed.SIS file using Developer Certificate
+due to the need for WriteDeviceData capability.

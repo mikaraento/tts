@@ -1,0 +1,19 @@
+/*
+* ============================================================================
+*  Name     : FepSetup_caption.rss
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+
+#include "fepsetup.loc"
+#include <apcaptionfile.rh>
+
+RESOURCE CAPTION_DATA
+{
+    caption=qtn_app_caption_string;
+    shortcaption=qtn_app_short_caption_string;
+}

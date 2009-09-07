@@ -1,0 +1,31 @@
+/*
+* ============================================================================
+*  Name     : bld.inf
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+
+PRJ_PLATFORMS
+// specify the non-default platforms your component needs to be built for here
+
+PRJ_EXPORTS
+// Specify the source file followed by its destination here
+// copy will be used to copy the source file to its destination
+// If there's no destination then the source file will be copied
+// to the same name in \epoc32\include
+// Example: 
+/*
+\agnmodel\inc\AGMCOMON.H
+*/
+
+PRJ_MMPFILES
+#ifdef EKA2
+FepSetup_S60_3rd_ed.mmp
+#else
+FepSetup.mmp
+#endif
+

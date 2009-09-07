@@ -9,6 +9,7 @@
 #include <implementationproxy.h>
 
 #include "app_reader.h"
+#include "app_readers/contacts.h"
 #include "app_readers/menu.h"
 #include "control_walker.h"
 #include "fep_proxy.h"
@@ -138,6 +139,8 @@ CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
   
   RProcess me;
   me.Open(me.Id());
+  // TODO(mikie): make an array of the different reader creation functions
+  // and loop through here.
   if (!app_reader_) {
     app_reader_ = new (ELeave) MenuReader;
     const TUint32 fepsetup_uid = 0xe0003473;
@@ -147,6 +150,14 @@ CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
       app_reader_ = NULL;
     }
   }
+  if (!app_reader_) {
+    app_reader_ = new (ELeave) ContactsReader;
+    if (app_reader_->ForApplication() != me.SecureId()) {
+      delete app_reader_;
+      app_reader_ = NULL;
+    }
+  }
+
 #if 0
   const TUid aknfepuid = { 0x101fd65a };
   akn_plugin_ = CCoeFepPlugIn::NewL(aknfepuid);
@@ -194,6 +205,16 @@ void ReportAppState(LoggingState* logger, const AppState& app) {
   buf.Append(_L(" view: "));
   buf.AppendNum(app.ViewUid().iUid, EHex);
   logger->Log(buf);
+
+  buf.Zero();
+  buf.Append(_L("tab "));
+  buf.AppendNum(app.SelectedTabIndex());
+  buf.Append(_L(" of "));
+  buf.AppendNum(app.TabCount());
+  buf.Append(_L(": "));
+  buf.Append(app.SelectedTabText().Left(80));
+  logger->Log(buf);
+
   buf.Zero();
   buf.Append(_L("item "));
   buf.AppendNum(app.SelectedItemIndex());
@@ -202,12 +223,19 @@ void ReportAppState(LoggingState* logger, const AppState& app) {
   buf.Append(_L(": "));
   buf.Append(app.SelectedItemText().Left(80));
   logger->Log(buf);
+
   buf.Zero();
+  buf.Append(_L("search field: "));
+  buf.Append(app.SearchFieldText().Left(80));
+  logger->Log(buf);
+
+  buf.Zero();  
   buf.Append(_L("softkeys "));
   buf.Append(app.FirstSoftkey());
   buf.Append(_L(" "));
   buf.Append(app.SecondSoftkey());
   logger->Log(buf);
+  
   logger->Log(app.Debug());
 }
 }  // namespace

@@ -1,8 +1,5 @@
 #include "app_readers/menu.h"
 
-// There's lots of generic state reading (softkeys, menu) here right now -
-// it'll get factored out to be used by the ContactsReader too.
-
 // The Menu app is odd. The main container cannot be found through the
 // TopFocusedControl nor the control stack. The menus don't come through
 // the AppUi's or current view's MenuBar().
@@ -29,13 +26,8 @@ const TUid& MenuReader::ForApplication() const {
   return kMenuUid;
 }
 
-// Although CEikMenuPane declares an IMPORT_C CascadeMenuPane() function
-// it's not actually in the LIBs.
 class CEikMenuPaneExtension {
  public:
-  static inline CEikMenuPane* CascadeMenuPane(CEikMenuPane* pane) {
-    return pane->iCascadeMenuPane;
-  }
   static inline CEikMenuPane* Owner(CEikMenuPane* pane) {
     return pane->iOwner;
   }
@@ -81,82 +73,38 @@ void MenuReader::ReadMenuState(CEikMenuPane* pane) {
       owner = CEikMenuPaneExtension::Owner(pane);
     }
     latest_menu_pane_ = pane;
-    app_state_.SetIsShowingMenuOrPopup(ETrue);
-    // After that, let's walk down to the most cascaded menu. This will
-    // be the active one as cascaded menus are automatically removed
-    // when they leave focus.
-    CEikMenuPane* cascade = pane;
-    while (cascade) {
-      pane = cascade;
-      cascade = CEikMenuPaneExtension::CascadeMenuPane(pane);
-    }
-    app_state_.SetItemCount(pane->NumberOfItemsInPane());
-    if (pane->NumberOfItemsInPane() > 0) {
-      // A menu might not have any items even if it's the normal convention.
-      // 
-      app_state_.SetSelectedItemIndex(pane->SelectedItem());
-      const CEikMenuPaneItem::SData& data = pane->ItemDataByIndexL(
-          pane->SelectedItem());
-      app_state_.SetSelectedItemText(data.iText);
-    }
+    app_helper_.ReadMenu(pane, &app_state_);
   }
 }
 
 void MenuReader::Read() {
   app_state_.Reset();
-  CAknTitlePane* title = control_tree_.TitlePane();
-  if (title) app_state_.SetTitle(*title->Text());
-
-  TVwsViewId view_id;
-  TInt view_found = control_tree_.AppUi()->GetActiveViewId(view_id);
-  if (view_found != KErrNotFound) {
-    app_state_.SetAppUid(view_id.iAppUid);
-    app_state_.SetViewUid(view_id.iViewUid);
-  }
-
-  // From
-  // http://wiki.forum.nokia.com/index.php/TSS000675_-_Retrieving_text_for_softkey_labels
-  CEikButtonGroupContainer* cba = control_tree_.Cba();
-  TInt first_command;
-  TInt second_command;
-  if (cba) {
-    MEikButtonGroup* buttonGroup = cba->ButtonGroup();
-    for (int pos = 0; pos < 3; ++pos) {
-      const TInt cmd_id = buttonGroup->CommandId(pos);
-      CCoeControl* button = buttonGroup->GroupControlById(cmd_id);
-      if (button && buttonGroup->IsCommandVisible(cmd_id)) {
-        CEikLabel* label =
-                static_cast<CEikLabel*> (button->ComponentControl(0));
-        const TDesC* txt = label->Text();
-        if (pos == 0) {
-          app_state_.SetFirstSoftkey(*txt);
-          first_command = cmd_id;
-        } else {
-          app_state_.SetSecondSoftkey(*txt);
-          second_command = cmd_id;
-        }
-      }
-    }
-  }
+  app_helper_.ReadTitle(&control_tree_, &app_state_);
+  const TVwsViewId view_id = app_helper_.ReadView(&control_tree_, &app_state_);
+  CEikButtonGroupContainer* cba =
+      app_helper_.ReadCba(&control_tree_, &app_state_);
 
 #ifndef __WINS__
   // Can't find the menu this way in the Menu app on-device.
   if (view_id.iViewUid.iUid != 1 || view_id.iAppUid != ForApplication())
 #endif  // !__WINS__
   {
-    TBuf<100> debug;
     CEikMenuBar* menu = control_tree_.MenuBar();
-    debug.Append(_L("menu = "));
-    debug.AppendNum((TUint32)menu, EHex);
-    if (menu) {
-      debug.Append(_L(" isfocused = "));
-      debug.AppendNum((TInt32)menu->IsFocused());
-      debug.Append(_L(" is_visible = "));
-      debug.AppendNum((TInt32)menu->IsVisible());
-      debug.Append(_L(" is_displayed = "));
-      debug.AppendNum((TInt32)menu->IsDisplayed());
+    if (0) {
+      // We just see menu = 0 on-device.
+      TBuf<100> debug;
+      debug.Append(_L("menu = "));
+      debug.AppendNum((TUint32)menu, EHex);
+      if (menu) {
+        debug.Append(_L(" isfocused = "));
+        debug.AppendNum((TInt32)menu->IsFocused());
+        debug.Append(_L(" is_visible = "));
+        debug.AppendNum((TInt32)menu->IsVisible());
+        debug.Append(_L(" is_displayed = "));
+        debug.AppendNum((TInt32)menu->IsDisplayed());
+      }
+      app_state_.SetDebug(debug);
     }
-    app_state_.SetDebug(debug);
     if (menu && menu->IsFocused()) {
       CEikMenuPane* pane = menu->MenuPane();
       ReadMenuState(pane);

@@ -38,3 +38,10 @@ after that.
 The code follows mostly Google C++ Coding Style
 (http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml) with some
 Symbianisms.
+
+Next steps:
+- Editor state should be available through MCoeFepAwareTextEditor (available
+  through CCoeAppUi::InputCapabilities)
+- Support for new apps can be built by running the FEP in development mode
+  and reading through the log files to reconstruct the structure of the
+  control tree. 

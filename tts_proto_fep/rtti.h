@@ -5,6 +5,7 @@
 
 class CAknGrid;
 class CAknSearchField;
+class CAknTab;
 class CCoeControl;
 class CEikEdwin;
 class CEikLabel;
@@ -24,7 +25,7 @@ bool IsValidPointer(void* p);
 
 // SafeTypes determines safely and guaranteed accurately the class of
 // controls. It typically does this by comparing vtable pointers.
-class SafeTypes : public CBase{
+class SafeTypes : public CBase {
  public:
   SafeTypes();
   CAknSearchField* IsAknSearchField(CCoeControl* control);
@@ -32,6 +33,7 @@ class SafeTypes : public CBase{
   CEikLabel* IsEikLabel(CCoeControl* control);
   CEikMenuPane* IsEikMenuPane(CCoeControl* control);
  private:
+  void* eik_label_vtable_;
   void* menu_pane_vtable_;
 };
 

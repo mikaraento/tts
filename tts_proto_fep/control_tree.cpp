@@ -7,6 +7,8 @@
 #include "modifed_system_include/coeaui.h"
 
 #include <aknappui.h>
+#include <aknnavi.h>
+#include <aknnavide.h>
 #include <akntitle.h>
 #include <aknviewappui.h>
 #include <eikbtgpc.h>
@@ -42,8 +44,8 @@ CAknTitlePane* ControlTree::TitlePane() {
   CEikStatusPane* sp = eikon_env_->AppUiFactory()->StatusPane();
   CAknTitlePane* title_pane = NULL;
   if (sp) {
-    title_pane = (CAknTitlePane*)
-        sp->ControlL(TUid::Uid(EEikStatusPaneUidTitle));
+    TRAPD(err, title_pane = (CAknTitlePane*)
+          sp->ControlL(TUid::Uid(EEikStatusPaneUidTitle)));
   }
   return title_pane;  
 }
@@ -86,6 +88,25 @@ CEikMenuBar* ControlTree::MenuBar() {
   }
   if (!menu) menu = eikon_env_->AppUiFactory()->MenuBar();
   return menu;
+}
+
+CAknTabGroup* ControlTree::TabGroup() {
+  // From
+  // http://wiki.forum.nokia.com/index.php/Tab_operations
+  CEikStatusPane* sp = eikon_env_->AppUiFactory()->StatusPane();
+  if (!sp) return NULL;
+  CAknNavigationControlContainer* navipane = NULL;
+  TRAPD(err, 
+      navipane = (CAknNavigationControlContainer*)sp->ControlL(
+          TUid::Uid(EEikStatusPaneUidNavi)));
+  if (!navipane) return NULL;
+  CAknNavigationDecorator* decorator = navipane->Top();
+  if (!decorator) return NULL;
+  if (decorator->ControlType() != CAknNavigationDecorator::ETabGroup) {
+    return NULL;
+  }
+  CAknTabGroup* tabgroup = (CAknTabGroup*)decorator->DecoratedControl();
+  return tabgroup;
 }
 
 CCoeControl* ControlTree::TopFocusedControl() {

@@ -1,0 +1,21 @@
+/*
+* ============================================================================
+*  Name     : FepSetupaif.rss
+*  Part of  : FepSetup
+*  Created  : 06/14/2006 by Forum Nokia 
+*  Version  : 2.0
+*  Copyright: Forum Nokia
+* ============================================================================
+*/
+
+#include <aiftool.rh>
+
+RESOURCE AIF_DATA
+    {
+    app_uid=0x00003473;
+    num_icons=2;
+    embeddability=KAppNotEmbeddable;
+    newfile=KAppDoesNotSupportNewFile;
+    }
+
+// End of File
