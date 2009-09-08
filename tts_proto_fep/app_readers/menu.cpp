@@ -119,7 +119,7 @@ void MenuReader::Read() {
     return;
   }
   
-#ifndef __WINS__
+#if !defined(__WINS__) || defined(__SERIES60_31__)
   TInt first_command = 0;
   TInt second_command = 0;
   if (cba) {
@@ -173,7 +173,7 @@ void MenuReader::Read() {
       // tuning for different firmware versions of the same device too.
       // Getting this wrong will crash. Could try to play safer by using
       // the recognition from UnsafeTypes.
-#ifdef __WINS__
+#if defined(__WINS__) && !defined(__SERIES60_31__)
       CCoeControl* container = main_view_;
 #else
       CCoeControl* container = main_view_->ComponentControl(0);
