@@ -118,20 +118,26 @@ void MenuReader::Read() {
     // Don't recognize this view, bail out.
     return;
   }
-  
-#if !defined(__WINS__) || defined(__SERIES60_31__)
+#if defined(__WINS__) && !defined(__SERIES60_31__) && !defined(__S60_32__)
+  const bool is_mr_emulator = true; 
+#else
+  const bool is_mr_emulator = false; 
+#endif
+
   TInt first_command = 0;
   TInt second_command = 0;
-  if (cba) {
-    MEikButtonGroup* buttonGroup = cba->ButtonGroup();
-    for (int pos = 0; pos < 3; ++pos) {
-      const TInt cmd_id = buttonGroup->CommandId(pos);
-      CCoeControl* button = buttonGroup->GroupControlById(cmd_id);
-      if (button && buttonGroup->IsCommandVisible(cmd_id)) {
-        if (pos == 0) {
-          first_command = cmd_id;
-        } else {
-          second_command = cmd_id;
+  if (!is_mr_emulator) { 
+    if (cba) {
+      MEikButtonGroup* buttonGroup = cba->ButtonGroup();
+      for (int pos = 0; pos < 3; ++pos) {
+        const TInt cmd_id = buttonGroup->CommandId(pos);
+        CCoeControl* button = buttonGroup->GroupControlById(cmd_id);
+        if (button && buttonGroup->IsCommandVisible(cmd_id)) {
+          if (pos == 0) {
+            first_command = cmd_id;
+          } else {
+            second_command = cmd_id;
+          }
         }
       }
     }
@@ -162,7 +168,6 @@ void MenuReader::Read() {
   } else {
     latest_menu_pane_ = NULL;
   }
-#endif  // !__WINS__
 
   CEikListBox* listbox = NULL;
   GetMainView();
@@ -173,11 +178,12 @@ void MenuReader::Read() {
       // tuning for different firmware versions of the same device too.
       // Getting this wrong will crash. Could try to play safer by using
       // the recognition from UnsafeTypes.
-#if defined(__WINS__) && !defined(__SERIES60_31__)
-      CCoeControl* container = main_view_;
-#else
-      CCoeControl* container = main_view_->ComponentControl(0);
-#endif
+      CCoeControl* container = NULL;
+      if (is_mr_emulator) {
+        container = main_view_;
+      } else {
+        container = main_view_->ComponentControl(0);
+      }
       if (container->CountComponentControls() > 0) {
         listbox = (CEikListBox*)container->ComponentControl(0);
       }

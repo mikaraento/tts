@@ -1,79 +1,12 @@
 #include "tts_proto_fep.h"
 
-#include <coeaui.h>
-#include <coecntrl.h>
-#include <coemain.h>
 #include <ecom/ecom.h>
-#include <eikenv.h>
 #include <fepbase.h>
 #include <implementationproxy.h>
 
-#include "app_reader.h"
-#include "app_readers/contacts.h"
-#include "app_readers/menu.h"
-#include "control_walker.h"
+#include "controller.h"
 #include "fep_proxy.h"
-#include "logging_window_gc.h"
 #include "reporting.h"
-
-static const TBool kDevelopmentMode = EFalse;
-
-// TODO(mikie): move the Triggerer classes to their own file and generalize
-// their action.
-class ForegroundWalkTriggerer : public CBase, public MCoeForegroundObserver {
- public:
-  ForegroundWalkTriggerer(TriggerInterface* walk, LoggingState* logger) {
-    walk_ = walk;
-    logger_ = logger;
-    CEikonEnv::Static()->AddForegroundObserverL(*this);
-  }
-  virtual ~ForegroundWalkTriggerer() {
-    CEikonEnv::Static()->RemoveForegroundObserver(*this);
-  }
- private:
-  virtual void HandleGainingForeground() {
-    walk_->OnTrigger();
-  }
-  virtual void HandleLosingForeground() {}
-  TriggerInterface* walk_;
-  LoggingState* logger_;
-};
-
-class KeyPressWalkTriggerer : public CCoeControl {
- public:
-  KeyPressWalkTriggerer(TriggerInterface* walk, LoggingState* logger) {
-    walk_ = walk;
-    logger_ = logger;
-  }
-  void ConstructL() {
-    // Set up a key catching control - front window, null size, non-focusing,
-    // added to stack for key events.
-    CreateWindowL();
-    SetNonFocusing();
-
-    RWindow& window = Window();
-    window.SetOrdinalPosition(0, ECoeWinPriorityFep);
-    TPoint fepControlPos(0, 0);
-
-    SetExtent(fepControlPos, TSize(0,0));
-    window.SetExtent(fepControlPos, TSize(0,0));
-    window.SetNonFading(ETrue);
-    ((CCoeAppUi*)iEikonEnv->AppUi())->AddToStackL(this,
-        ECoeStackPriorityFep, ECoeStackFlagSharable|ECoeStackFlagRefusesFocus);
-  }
-  virtual ~KeyPressWalkTriggerer() {
-    ((CCoeAppUi*)iEikonEnv->AppUi())->RemoveFromStack(this);
-  }
-  virtual TKeyResponse OfferKeyEventL(const TKeyEvent& /* aKeyEvent */,
-                              TEventCode /* aEventCode */) {
-    walk_->OnTrigger();
-    return EKeyWasNotConsumed;
-  }
-
- private:
-  TriggerInterface* walk_;
-  LoggingState* logger_;
-};
 
 CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
   // The Phone application doesn't like the indirectly created AKNFEP. The
@@ -90,18 +23,37 @@ CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
   RProcess me;
   me.Open(me.Id());
   if (me.FileName().CompareF(_L("z:\\sys\\bin\\phone.exe")) == 0) {
+    // In the phone process we want to run the TTS code even though we are not
+    // the FEP. To do that we need to: 1) keep the dll loaded and 2) start
+    // the TTS code.
+    // This will keep the dll loaded even if the FEP is uninstalled. An OOB
+    // mechanism will be needed to tell this unload if unloading support
+    // is needed.
+    // With this code the only way to unload the FEP fully and access the
+    // log file is to reboot the phone.
+    if (LoggingState::Get()) {
+      // We are already loaded in this process, just get out.
+      me.Close();
+      User::Leave(KErrAlreadyExists);
+    }
+    {
+      RLibrary l;
+      const TInt err = l.Load(_L("tts_proto_fep_20006e90.dll"));
+      if (err != KErrNone) {
+        User::Panic(_L("TTS-FEP-1"), err);
+      }
+      // Purposefully leak the handle - would need to keep track if unload
+      // was wanted.
+    }
+    {
+      TtsController* controller = new (ELeave) TtsController;
+      controller->ConstructL();
+      // Purposefully leak the object - would need to keep track if unload
+      // was wanted.
+    }
     me.Close();
     User::Leave(KErrAlreadyExists);
   }
-  /*
-  if (me.FileName().CompareF(_L("z:\\sys\\bin\\phonebook.exe")) != 0) {
-    me.Close();
-    User::Leave(KErrAlreadyExists);
-  }
-  if (me.FileName().CompareF(_L("z:\\sys\\bin\\menu.exe")) != 0) {
-    me.Close();
-    User::Leave(KErrAlreadyExists);
-  }*/
   me.Close();
 
   TtsProtoFepPlugin* self = new (ELeave) TtsProtoFepPlugin;
@@ -112,52 +64,14 @@ CCoeFepPlugIn* TtsProtoFepPlugin::NewL() {
 }
 
 TtsProtoFepPlugin::~TtsProtoFepPlugin() {
-  // TODO(mikie): installing another FEP hangs the phone - see if that can
-  // be helped.
+  delete controller_;
   delete akn_plugin_;
-  LoggingState::TeardownTls();
-  if (original_gc_) {
-    Mem::Copy(original_gc_, original_gc_vtbl_, 4);
-  }
-  delete triggerer_;
-  delete key_triggerer_;
-  delete walker_;
-  delete async_trigger_;
-  delete app_reader_;
 }
 
 CCoeFep* TtsProtoFepPlugin::NewFepL(CCoeEnv& aCoeEnv,
                                     const CCoeFepParameters& aFepParameters) {
-  async_trigger_ = new (ELeave) AsyncTrigger(this);
-  walker_ = new (ELeave) ControlWalker;
-  // walker_->TriggerWalk(LoggingState::Get());
-  triggerer_ = new (ELeave) ForegroundWalkTriggerer(async_trigger_,
-                                                    LoggingState::Get());
-  key_triggerer_ = new (ELeave) KeyPressWalkTriggerer(async_trigger_,
-                                                      LoggingState::Get());
-  key_triggerer_->ConstructL();
-  
-  RProcess me;
-  me.Open(me.Id());
-  // TODO(mikie): make an array of the different reader creation functions
-  // and loop through here.
-  if (!app_reader_) {
-    app_reader_ = new (ELeave) MenuReader;
-    const TUint32 fepsetup_uid = 0xe0003473;
-    if (app_reader_->ForApplication() != me.SecureId() &&
-        fepsetup_uid != me.SecureId()) {
-      delete app_reader_;
-      app_reader_ = NULL;
-    }
-  }
-  if (!app_reader_) {
-    app_reader_ = new (ELeave) ContactsReader;
-    if (app_reader_->ForApplication() != me.SecureId()) {
-      delete app_reader_;
-      app_reader_ = NULL;
-    }
-  }
-
+  controller_ = new (ELeave) TtsController;
+  controller_->ConstructL();
 #if 0
   const TUid aknfepuid = { 0x101fd65a };
   akn_plugin_ = CCoeFepPlugIn::NewL(aknfepuid);
@@ -183,75 +97,8 @@ TtsProtoFepPlugin::TtsProtoFepPlugin() {
 }
 
 void TtsProtoFepPlugin::ConstructL() {
-  LoggingState::SetupTls();
-
-  return;
-
-  CCoeEnv* env = CCoeEnv::Static();
-  LoggingWindowGc* temp_logging_gc = new (ELeave) LoggingWindowGc(env->ScreenDevice());
-  original_gc_ = env->SwapSystemGc(temp_logging_gc);
-  Mem::Copy(original_gc_vtbl_, original_gc_, 4);
-  Mem::Copy(original_gc_, temp_logging_gc, 4); // replace the vtable
-  env->SwapSystemGc(original_gc_);
-  delete temp_logging_gc;
 }
 
-namespace {
-void ReportAppState(LoggingState* logger, const AppState& app) {
-  TBuf<128> buf;
-  buf.Append(app.Title().Left(80));
-  buf.Append(_L(" uid: "));
-  buf.AppendNum(app.AppUid().iUid, EHex);
-  buf.Append(_L(" view: "));
-  buf.AppendNum(app.ViewUid().iUid, EHex);
-  logger->Log(buf);
-
-  buf.Zero();
-  buf.Append(_L("tab "));
-  buf.AppendNum(app.SelectedTabIndex());
-  buf.Append(_L(" of "));
-  buf.AppendNum(app.TabCount());
-  buf.Append(_L(": "));
-  buf.Append(app.SelectedTabText().Left(80));
-  logger->Log(buf);
-
-  buf.Zero();
-  buf.Append(_L("item "));
-  buf.AppendNum(app.SelectedItemIndex());
-  buf.Append(_L(" of "));
-  buf.AppendNum(app.ItemCount());
-  buf.Append(_L(": "));
-  buf.Append(app.SelectedItemText().Left(80));
-  logger->Log(buf);
-
-  buf.Zero();
-  buf.Append(_L("search field: "));
-  buf.Append(app.SearchFieldText().Left(80));
-  logger->Log(buf);
-
-  buf.Zero();  
-  buf.Append(_L("softkeys "));
-  buf.Append(app.FirstSoftkey());
-  buf.Append(_L(" "));
-  buf.Append(app.SecondSoftkey());
-  logger->Log(buf);
-  
-  logger->Log(app.Debug());
-}
-}  // namespace
-
-void TtsProtoFepPlugin::OnTrigger() {
-  if (kDevelopmentMode) {
-    // development mode
-    walker_->Walk(LoggingState::Get());
-  } else {
-    if (app_reader_) {
-      app_reader_->Read();
-      ReportAppState(LoggingState::Get(), app_reader_->State());
-    }
-  }
-}
-                       
 //
 const TImplementationProxy kImplementationTable[] = {
         IMPLEMENTATION_PROXY_ENTRY(0x20006E90, TtsProtoFepPlugin::NewL) };

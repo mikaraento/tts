@@ -15,6 +15,7 @@ SOURCE          app_helper.cpp
 SOURCE          app_reader.cpp
 SOURCE          control_tree.cpp
 SOURCE          control_walker.cpp
+SOURCE          controller.cpp
 SOURCE          fep_proxy.cpp
 SOURCE          logging_window_gc.cpp
 SOURCE          rtti.cpp
@@ -22,6 +23,7 @@ SOURCE          trigger.cpp
 SOURCE          tts_proto_fep.cpp
 SOURCE          app_readers\contacts.cpp
 SOURCE          app_readers\menu.cpp
+SOURCE          app_readers\phone.cpp
 
 SOURCEPATH      .
 START RESOURCE  tts_proto_fep.rss

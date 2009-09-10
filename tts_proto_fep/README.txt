@@ -47,6 +47,10 @@ still actually get the old one if it's not been fully unloaded. The sure
 way to get the new one is to reboot the phone and only install with FepSetup
 after that.
 
+With the version of the code that loads TtsController into the phone app the
+only way to get the FEP unloaded and access the log file is to reboot the
+phone.
+
 3. Coding style
 
 The code follows mostly Google C++ Coding Style

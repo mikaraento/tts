@@ -32,7 +32,9 @@ void ContactsReader::ReadList(CEikListBox* listbox, AppState* app_state) {
 void ContactsReader::Read() {
   app_state_.Reset();
   app_helper_.ReadTitle(&control_tree_, &app_state_);
+  // return;
   const TVwsViewId view_id = app_helper_.ReadView(&control_tree_, &app_state_);
+  return;
   app_helper_.ReadCba(&control_tree_, &app_state_);
   CEikMenuBar* menu = control_tree_.MenuBar();
   if (menu && menu->IsFocused()) {
